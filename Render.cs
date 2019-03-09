@@ -36,8 +36,7 @@ uniform vec4 colr;
 
 void main()
 {
-    gl_Position = MVP * vec4(in_position, 1);
-    //v2f_color = vec4(in_brightness, in_brightness, in_brightness, 1);
+    gl_Position = MVP * vec4(in_position, 1.0);
     v2f_color = vec4((coll.xyz * blend_fac + colr.xyz * (1 - blend_fac)) * in_brightness, 1);
 }
 ";
@@ -66,12 +65,37 @@ uniform vec4 colr;
 
 void main()
 {
-    gl_Position = MVP * vec4(in_position, 1);
-    //v2f_color = vec4(in_brightness, in_brightness, in_brightness, 1);
+    gl_Position = MVP * vec4(in_position, 1.0);
     v2f_color = vec4(1 - in_brightness + (coll.xyz * blend_fac + colr.xyz * (1 - blend_fac)) * in_brightness, 1);
 }
 ";
         string blackKeyShaderFrag = @"#version 330 core
+
+in vec4 v2f_color;
+layout (location=0) out vec4 out_color;
+
+void main()
+{
+    out_color = v2f_color;
+}
+";
+        string noteShaderVert = @"#version 330 core
+
+layout(location=0) in vec3 in_position;
+layout(location=1) in vec4 in_color;
+layout(location=2) in float in_shade;
+
+out vec4 v2f_color;
+
+uniform mat4 MVP;
+
+void main()
+{
+    gl_Position = MVP * vec4(in_position, 1.0);
+    v2f_color = vec4(in_color.xyz + in_shade, in_color.w);
+}
+";
+        string noteShaderFrag = @"#version 330 core
 
 in vec4 v2f_color;
 layout (location=0) out vec4 out_color;
@@ -121,15 +145,19 @@ void main()
         int uBlackKeycoll;
         int uBlackKeycolr;
 
+        int uNoteMVP;
+
         public bool ManualNoteDelete => false;
 
         public double LastMidiTimePerTick { get; set; } = 500000 / 96.0;
 
-        public double NoteScreenTime => 600;
+        public double NoteScreenTime => settings.viewdist * settings.deltaTimeOnScreen;
 
         public long LastNoteCount { get; private set; }
 
-        public Control SettingsControl => null;
+        public Control SettingsControl { get; private set; }
+
+        public int NoteCollectorOffset => -(int)(settings.deltaTimeOnScreen * 0.2);
 
         bool[] blackKeys = new bool[257];
         int[] keynum = new int[257];
@@ -143,15 +171,33 @@ void main()
         int whiteKeyVert;
         int whiteKeyCol;
         int whiteKeyIndx;
+        int whiteKeyBlend;
         int blackKeyVert;
         int blackKeyCol;
         int blackKeyIndx;
-        int whiteKeyBlend;
         int blackKeyBlend;
+
+        int noteVert;
+        int noteCol;
+        int noteIndx;
+        int noteShade;
+
+        int noteBuffLen = 2048;
+
+        double[] noteVertBuff;
+        float[] noteColBuff;
+        float[] noteShadeBuff;
+        int[] noteIndxBuff;
+
+        int noteBuffPos = 0;
 
         public void Dispose()
         {
-            GL.DeleteBuffers(4, new int[] { whiteKeyVert, whiteKeyCol, blackKeyVert, blackKeyCol, whiteKeyIndx, blackKeyIndx });
+            GL.DeleteBuffers(12, new int[] {
+                whiteKeyVert, whiteKeyCol, blackKeyVert, blackKeyCol,
+                whiteKeyIndx, blackKeyIndx, whiteKeyBlend, blackKeyBlend,
+                noteVert, noteCol, noteIndx, noteShade
+            });
             util.Dispose();
             Initialized = false;
             Console.WriteLine("Disposed of MidiTrailRender");
@@ -162,7 +208,7 @@ void main()
         {
             this.settings = new Settings();
             this.renderSettings = settings;
-            //SettingsControl = new SettingsCtrl(this.settings);
+            SettingsControl = new SettingsCtrl(this.settings);
             //PreviewImage = BitmapToImageSource(Properties.Resources.preview);
             for (int i = 0; i < blackKeys.Length; i++) blackKeys[i] = isBlackNote(i);
             int b = 0;
@@ -174,10 +220,13 @@ void main()
             }
         }
 
+        int whiteKeyBufferLen = 0;
+        int blackKeyBufferLen = 0;
         public void Init()
         {
             whiteKeyShader = MakeShader(whiteKeyShaderVert, whiteKeyShaderFrag);
             blackKeyShader = MakeShader(blackKeyShaderVert, blackKeyShaderFrag);
+            noteShader = MakeShader(noteShaderVert, noteShaderFrag);
 
             uWhiteKeyMVP = GL.GetUniformLocation(whiteKeyShader, "MVP");
             uWhiteKeycoll = GL.GetUniformLocation(whiteKeyShader, "coll");
@@ -187,7 +236,10 @@ void main()
             uBlackKeycoll = GL.GetUniformLocation(blackKeyShader, "coll");
             uBlackKeycolr = GL.GetUniformLocation(blackKeyShader, "colr");
 
+            uNoteMVP = GL.GetUniformLocation(noteShader, "MVP");
+
             GLUtils.GenFrameBufferTexture(renderSettings.width, renderSettings.height, out buffer3dbuf, out buffer3dtex, true);
+
             util = new Util();
             Initialized = true;
             Console.WriteLine("Initialised MidiTrailRender");
@@ -195,38 +247,34 @@ void main()
 
             whiteKeyVert = GL.GenBuffer();
             whiteKeyCol = GL.GenBuffer();
+            whiteKeyIndx = GL.GenBuffer();
+            whiteKeyBlend = GL.GenBuffer();
+
             blackKeyVert = GL.GenBuffer();
             blackKeyCol = GL.GenBuffer();
-            whiteKeyIndx = GL.GenBuffer();
             blackKeyIndx = GL.GenBuffer();
-            whiteKeyBlend = GL.GenBuffer();
             blackKeyBlend = GL.GenBuffer();
-        }
 
-        Color4[] keyColors = new Color4[514];
-        double[] x1array = new double[257];
-        double[] wdtharray = new double[257];
-        public void RenderFrame(FastList<Note> notes, double midiTime, int finalCompositeBuff)
-        {
-            GL.Enable(EnableCap.Blend);
-            GL.EnableClientState(ArrayCap.VertexArray);
-            GL.EnableClientState(ArrayCap.ColorArray);
-            GL.Enable(EnableCap.Texture2D);
-            GL.Enable(EnableCap.DepthTest);
+            noteVert = GL.GenBuffer();
+            noteCol = GL.GenBuffer();
+            noteIndx = GL.GenBuffer();
+            noteShade = GL.GenBuffer();
 
-            GL.EnableVertexAttribArray(0);
-            GL.EnableVertexAttribArray(1);
-            GL.EnableVertexAttribArray(2);
+            noteVertBuff = new double[noteBuffLen * 4 * 3];
+            noteColBuff = new float[noteBuffLen * 4 * 4];
+            noteShadeBuff = new float[noteBuffLen * 4];
 
-            GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+            noteIndxBuff = new int[noteBuffLen * 4];
 
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, buffer3dbuf);
-            GL.Viewport(0, 0, renderSettings.width, renderSettings.height);
-            GL.Clear(ClearBufferMask.ColorBufferBit);
-            GL.Clear(ClearBufferMask.DepthBufferBit);
+            for (int i = 0; i < noteIndxBuff.Length; i++) noteIndxBuff[i] = i;
+            GL.BindBuffer(BufferTarget.ElementArrayBuffer, noteIndx);
+            GL.BufferData(
+                BufferTarget.ElementArrayBuffer,
+                (IntPtr)(noteIndxBuff.Length * 4),
+                noteIndxBuff,
+                BufferUsageHint.StaticDraw);
 
-            GL.UseProgram(whiteKeyShader);
-
+            #region White Key Model
             float whitekeylen = 5.5f;
             double[] verts = new double[] {
                 //front
@@ -322,6 +370,7 @@ void main()
 
             int[] indexes = new int[28];
             for (int i = 0; i < indexes.Length; i++) indexes[i] = i;
+            whiteKeyBufferLen = indexes.Length;
 
             GL.BindBuffer(BufferTarget.ArrayBuffer, whiteKeyVert);
             GL.BufferData(
@@ -329,43 +378,169 @@ void main()
                 (IntPtr)(verts.Length * 8),
                 verts,
                 BufferUsageHint.StaticDraw);
-            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Double, false, 24, 0);
             GL.BindBuffer(BufferTarget.ArrayBuffer, whiteKeyCol);
             GL.BufferData(
                 BufferTarget.ArrayBuffer,
                 (IntPtr)(cols.Length * 4),
                 cols,
                 BufferUsageHint.StaticDraw);
-            GL.VertexAttribPointer(1, 1, VertexAttribPointerType.Float, false, 4, 0);
             GL.BindBuffer(BufferTarget.ArrayBuffer, whiteKeyBlend);
             GL.BufferData(
                 BufferTarget.ArrayBuffer,
                 (IntPtr)(blend.Length * 4),
                 blend,
                 BufferUsageHint.StaticDraw);
-            GL.VertexAttribPointer(2, 1, VertexAttribPointerType.Float, false, 4, 0);
             GL.BindBuffer(BufferTarget.ElementArrayBuffer, whiteKeyIndx);
             GL.BufferData(
                 BufferTarget.ElementArrayBuffer,
                 (IntPtr)(indexes.Length * 4),
                 indexes,
                 BufferUsageHint.StaticDraw);
-            GL.IndexPointer(IndexPointerType.Int, 1, 0);
+            #endregion
+
+            #region Black Key Model
+            float blackkeylen = 7.5f;
+            verts = new double[] {
+                //front
+                0, 0, -blackkeylen,
+                0, 1, -blackkeylen + 1,
+                1, 1, -blackkeylen + 1,
+                1, 0, -blackkeylen,
+                //top
+                0, 1, -blackkeylen + 1,
+                0, 1, -0,
+                1, 1, -0,
+                1, 1, -blackkeylen + 1,
+                //left
+                0, 0, 0,
+                0, 0, -blackkeylen,
+                0, 1, -blackkeylen + 1,
+                0, 1, 0,
+                //left
+                1, 0, 0,
+                1, 0, -blackkeylen,
+                1, 1, -blackkeylen + 1,
+                1, 1, 0,
+            };
+
+            cols = new float[] {
+                //front
+                0.9f,
+                0.95f,
+                0.95f,
+                0.9f,                
+                //top
+                1f,
+                0.94f,
+                0.94f,
+                1f,              
+                //left
+                0.8f,
+                0.8f,
+                0.9f,
+                0.8f,        
+                //right
+                0.8f,
+                0.8f,
+                0.9f,
+                0.8f,
+            };
+            blend = new float[] {
+                //front
+                1, 1, 1, 1,
+                //front
+                1, 0, 0, 1,
+                //left
+                0, 1, 1, 0,
+                //right
+                0, 1, 1, 0,
+            };
+
+            indexes = new int[16];
+            for (int i = 0; i < indexes.Length; i++) indexes[i] = i;
+            blackKeyBufferLen = indexes.Length;
+
+            GL.BindBuffer(BufferTarget.ArrayBuffer, blackKeyVert);
+            GL.BufferData(
+                BufferTarget.ArrayBuffer,
+                (IntPtr)(verts.Length * 8),
+                verts,
+                BufferUsageHint.StaticDraw);
+            GL.BindBuffer(BufferTarget.ArrayBuffer, blackKeyCol);
+            GL.BufferData(
+                BufferTarget.ArrayBuffer,
+                (IntPtr)(cols.Length * 4),
+                cols,
+                BufferUsageHint.StaticDraw);
+            GL.BindBuffer(BufferTarget.ArrayBuffer, blackKeyBlend);
+            GL.BufferData(
+                BufferTarget.ArrayBuffer,
+                (IntPtr)(blend.Length * 4),
+                blend,
+                BufferUsageHint.StaticDraw);
+            GL.BindBuffer(BufferTarget.ElementArrayBuffer, blackKeyIndx);
+            GL.BufferData(
+                BufferTarget.ElementArrayBuffer,
+                (IntPtr)(indexes.Length * 4),
+                indexes,
+                BufferUsageHint.StaticDraw);
+            #endregion
+        }
+
+        Color4[] keyColors = new Color4[514];
+        double[] x1array = new double[257];
+        double[] wdtharray = new double[257];
+        double[] keyPressFactor = new double[257];
+        public void RenderFrame(FastList<Note> notes, double midiTime, int finalCompositeBuff)
+        {
+            GL.Enable(EnableCap.Blend);
+            GL.EnableClientState(ArrayCap.VertexArray);
+            GL.EnableClientState(ArrayCap.ColorArray);
+            GL.Enable(EnableCap.Texture2D);
+            GL.Enable(EnableCap.DepthTest);
+            GL.DepthFunc(DepthFunction.Always);
+
+            GL.EnableVertexAttribArray(0);
+            GL.EnableVertexAttribArray(1);
+            GL.EnableVertexAttribArray(2);
+
+            GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, buffer3dbuf);
+            GL.Viewport(0, 0, renderSettings.width, renderSettings.height);
+            GL.Clear(ClearBufferMask.ColorBufferBit);
+            GL.Clear(ClearBufferMask.DepthBufferBit);
 
             long nc = 0;
             int firstNote = settings.firstNote;
             int lastNote = settings.lastNote;
             bool sameWidth = settings.sameWidthNotes;
+            double deltaTimeOnScreen = NoteScreenTime;
+            double noteDownSpeed = settings.noteDownSpeed;
+            double noteUpSpeed = settings.noteUpSpeed;
+            bool blockNotes = settings.boxNotes;
+            bool useVel = settings.useVel;
+
+            double fov = settings.FOV;
+            double aspect = (double)renderSettings.width / renderSettings.height;
+            double viewdist = settings.viewdist;
+            double viewheight = settings.viewHeight;
+            double viewoffset = -settings.viewOffset;
+            double camAng = settings.camAng;
+            fov /= 1;
+            for (int i = 0; i < 514; i++) keyColors[i] = Color4.Transparent;
+            for (int i = 0; i < keyPressFactor.Length; i++) keyPressFactor[i] = Math.Max(keyPressFactor[i] / 1.05 - noteUpSpeed, 0);
             float wdth;
+            double wdthd;
             float wdth2;
-            float r, g, b, a, r2, g2, b2, a2, r3, g3, b3, a3;
+            float r, g, b, a, r2, g2, b2, a2;
             float x1;
             float x2;
+            double x1d;
+            double x2d;
             double y1;
             double y2;
             Matrix4 mvp;
-            double xx1, xx2, yy1, yy2;
-            double ys1, ys2;
             if (settings.sameWidthNotes)
             {
                 for (int i = 0; i < 257; i++)
@@ -407,6 +582,320 @@ void main()
                 }
             }
 
+            #region Notes
+            noteBuffPos = 0;
+            GL.UseProgram(noteShader);
+
+            mvp = Matrix4.Identity *
+                Matrix4.CreateTranslation(0, -(float)viewheight, -(float)viewoffset) *
+                Matrix4.CreateScale(1, 1, -1) *
+                Matrix4.CreateRotationX((float)camAng) *
+                Matrix4.CreatePerspectiveFieldOfView((float)fov, (float)aspect, 0.01f, 400)
+                ;
+            GL.UniformMatrix4(uNoteMVP, false, ref mvp);
+
+            double renderCutoff = midiTime + deltaTimeOnScreen;
+            double renderStart = midiTime + NoteCollectorOffset;
+
+            if (blockNotes)
+            {
+                foreach (Note n in notes)
+                {
+                    if (n.end >= renderStart || !n.hasEnded)
+                    {
+                        if (n.start < renderCutoff)
+                        {
+                            nc++;
+                            int k = n.note;
+                            if (!(k >= firstNote && k < lastNote)) continue;
+                            Color4 coll = n.track.trkColor[n.channel * 2];
+                            Color4 colr = n.track.trkColor[n.channel * 2 + 1];
+                            float shade = 0;
+                            if (n.start < midiTime && (n.end > midiTime || !n.hasEnded))
+                            {
+                                if (!n.hasEnded)
+                                    shade = 0.3f;
+                                else
+                                {
+                                    double len = n.end - n.start;
+                                    double offset = n.end - midiTime;
+                                    shade = (float)(Math.Pow(offset / len, 0.4) * 0.3);
+                                }
+                            }
+                            shade -= 0.3f;
+                            x1d = x1array[k] - 0.5;
+                            wdthd = wdtharray[k];
+                            y1 = n.end - midiTime;
+                            y2 = n.start - midiTime;
+                            if (!n.hasEnded)
+                                y1 = viewdist * deltaTimeOnScreen;
+                            y1 /= deltaTimeOnScreen / viewdist;
+                            y2 /= deltaTimeOnScreen / viewdist;
+
+                            if (x1d < 0) x1d += wdthd;
+
+                            r = coll.R;
+                            g = coll.G;
+                            b = coll.B;
+                            a = coll.A;
+                            r2 = colr.R;
+                            g2 = colr.G;
+                            b2 = colr.B;
+                            a2 = colr.A;
+
+                            int pos = noteBuffPos * 12;
+                            noteVertBuff[pos++] = x1d;
+                            noteVertBuff[pos++] = 0;
+                            noteVertBuff[pos++] = y2;
+                            noteVertBuff[pos++] = x1d;
+                            noteVertBuff[pos++] = 0;
+                            noteVertBuff[pos++] = y1;
+                            noteVertBuff[pos++] = x1d;
+                            noteVertBuff[pos++] = -wdthd;
+                            noteVertBuff[pos++] = y1;
+                            noteVertBuff[pos++] = x1d;
+                            noteVertBuff[pos++] = -wdthd;
+                            noteVertBuff[pos++] = y2;
+
+                            pos = noteBuffPos * 16;
+                            noteColBuff[pos++] = r;
+                            noteColBuff[pos++] = g;
+                            noteColBuff[pos++] = b;
+                            noteColBuff[pos++] = a;
+                            noteColBuff[pos++] = r;
+                            noteColBuff[pos++] = g;
+                            noteColBuff[pos++] = b;
+                            noteColBuff[pos++] = a;
+                            noteColBuff[pos++] = r2;
+                            noteColBuff[pos++] = g2;
+                            noteColBuff[pos++] = b2;
+                            noteColBuff[pos++] = a2;
+                            noteColBuff[pos++] = r2;
+                            noteColBuff[pos++] = g2;
+                            noteColBuff[pos++] = b2;
+                            noteColBuff[pos++] = a2;
+
+                            pos = noteBuffPos * 4;
+                            noteShadeBuff[pos++] = shade;
+                            noteShadeBuff[pos++] = shade;
+                            noteShadeBuff[pos++] = shade;
+                            noteShadeBuff[pos++] = shade;
+
+                            noteBuffPos++;
+                            FlushNoteBuffer();
+
+                        }
+                        else break;
+                    }
+                }
+
+                FlushNoteBuffer(false);
+
+                foreach (Note n in notes)
+                {
+                    if (n.end >= renderStart || !n.hasEnded)
+                    {
+                        if (n.start < renderCutoff)
+                        {
+                            nc++;
+                            int k = n.note;
+                            if (!(k >= firstNote && k < lastNote)) continue;
+                            Color4 coll = n.track.trkColor[n.channel * 2];
+                            Color4 colr = n.track.trkColor[n.channel * 2 + 1];
+                            float shade = 0;
+                            if (n.start < midiTime && (n.end > midiTime || !n.hasEnded))
+                            {
+                                if (!n.hasEnded)
+                                    shade = 0.3f;
+                                else
+                                {
+                                    double len = n.end - n.start;
+                                    double offset = n.end - midiTime;
+                                    shade = (float)(Math.Pow(offset / len, 0.4) * 0.3);
+                                }
+                            }
+                            shade -= 0.2f;
+                            x1d = x1array[k] - 0.5;
+                            wdthd = wdtharray[k];
+                            x2d = x1d + wdthd;
+                            y1 = n.end - midiTime;
+                            y2 = n.start - midiTime;
+                            if (!n.hasEnded)
+                                y1 = viewdist * deltaTimeOnScreen;
+                            y1 /= deltaTimeOnScreen / viewdist;
+                            y2 /= deltaTimeOnScreen / viewdist;
+
+                            r = coll.R;
+                            g = coll.G;
+                            b = coll.B;
+                            a = coll.A;
+                            r2 = colr.R;
+                            g2 = colr.G;
+                            b2 = colr.B;
+                            a2 = colr.A;
+
+                            int pos = noteBuffPos * 12;
+                            noteVertBuff[pos++] = x2d;
+                            noteVertBuff[pos++] = -wdthd;
+                            noteVertBuff[pos++] = y2;
+                            noteVertBuff[pos++] = x2d;
+                            noteVertBuff[pos++] = 0;
+                            noteVertBuff[pos++] = y2;
+                            noteVertBuff[pos++] = x1d;
+                            noteVertBuff[pos++] = 0;
+                            noteVertBuff[pos++] = y2;
+                            noteVertBuff[pos++] = x1d;
+                            noteVertBuff[pos++] = -wdthd;
+                            noteVertBuff[pos++] = y2;
+
+                            pos = noteBuffPos * 16;
+                            noteColBuff[pos++] = r;
+                            noteColBuff[pos++] = g;
+                            noteColBuff[pos++] = b;
+                            noteColBuff[pos++] = a;
+                            noteColBuff[pos++] = r;
+                            noteColBuff[pos++] = g;
+                            noteColBuff[pos++] = b;
+                            noteColBuff[pos++] = a;
+                            noteColBuff[pos++] = r2;
+                            noteColBuff[pos++] = g2;
+                            noteColBuff[pos++] = b2;
+                            noteColBuff[pos++] = a2;
+                            noteColBuff[pos++] = r2;
+                            noteColBuff[pos++] = g2;
+                            noteColBuff[pos++] = b2;
+                            noteColBuff[pos++] = a2;
+
+                            pos = noteBuffPos * 4;
+                            noteShadeBuff[pos++] = shade;
+                            noteShadeBuff[pos++] = shade;
+                            noteShadeBuff[pos++] = shade;
+                            noteShadeBuff[pos++] = shade;
+
+                            noteBuffPos++;
+                            FlushNoteBuffer();
+
+                        }
+                        else break;
+                    }
+                }
+            }
+
+            foreach (Note n in notes)
+            {
+                if (n.end >= renderStart || !n.hasEnded)
+                {
+                    if (n.start < renderCutoff)
+                    {
+                        nc++;
+                        int k = n.note;
+                        if (!(k >= firstNote && k < lastNote)) continue;
+                        Color4 coll = n.track.trkColor[n.channel * 2];
+                        Color4 colr = n.track.trkColor[n.channel * 2 + 1];
+                        float shade = 0;
+                        if (n.start < midiTime && (n.end > midiTime || !n.hasEnded))
+                        {
+                            Color4 origcoll = keyColors[k * 2];
+                            Color4 origcolr = keyColors[k * 2 + 1];
+                            float blendfac = coll.A * 0.8f;
+                            float revblendfac = 1 - blendfac;
+                            keyColors[k * 2] = new Color4(
+                                coll.R * blendfac + origcoll.R * revblendfac,
+                                coll.G * blendfac + origcoll.G * revblendfac,
+                                coll.B * blendfac + origcoll.B * revblendfac,
+                                1);
+                            blendfac = colr.A * 0.8f;
+                            revblendfac = 1 - blendfac;
+                            keyColors[k * 2 + 1] = new Color4(
+                                colr.R * blendfac + origcolr.R * revblendfac,
+                                colr.G * blendfac + origcolr.G * revblendfac,
+                                colr.B * blendfac + origcolr.B * revblendfac,
+                                1);
+                            if (useVel)
+                                keyPressFactor[k] = Math.Min(1, keyPressFactor[k] + noteDownSpeed * n.vel / 127.0);
+                            else
+                                keyPressFactor[k] = Math.Min(1, keyPressFactor[k] + noteDownSpeed);
+                            if (!n.hasEnded)
+                                shade = 0.3f;
+                            else
+                            {
+                                double len = n.end - n.start;
+                                double offset = n.end - midiTime;
+                                shade = (float)(Math.Pow(offset / len, 0.4) * 0.3);
+                            }
+                        }
+                        x1d = x1array[k] - 0.5;
+                        wdthd = wdtharray[k];
+                        x2d = x1d + wdthd;
+                        y1 = n.end - midiTime;
+                        y2 = n.start - midiTime;
+                        if (!n.hasEnded)
+                            y1 = viewdist * deltaTimeOnScreen;
+                        y1 /= deltaTimeOnScreen / viewdist;
+                        y2 /= deltaTimeOnScreen / viewdist;
+
+                        r = coll.R;
+                        g = coll.G;
+                        b = coll.B;
+                        a = coll.A;
+                        r2 = colr.R;
+                        g2 = colr.G;
+                        b2 = colr.B;
+                        a2 = colr.A;
+
+                        int pos = noteBuffPos * 12;
+                        noteVertBuff[pos++] = x2d;
+                        noteVertBuff[pos++] = 0;
+                        noteVertBuff[pos++] = y2;
+                        noteVertBuff[pos++] = x2d;
+                        noteVertBuff[pos++] = 0;
+                        noteVertBuff[pos++] = y1;
+                        noteVertBuff[pos++] = x1d;
+                        noteVertBuff[pos++] = 0;
+                        noteVertBuff[pos++] = y1;
+                        noteVertBuff[pos++] = x1d;
+                        noteVertBuff[pos++] = 0;
+                        noteVertBuff[pos++] = y2;
+
+                        pos = noteBuffPos * 16;
+                        noteColBuff[pos++] = r;
+                        noteColBuff[pos++] = g;
+                        noteColBuff[pos++] = b;
+                        noteColBuff[pos++] = a;
+                        noteColBuff[pos++] = r;
+                        noteColBuff[pos++] = g;
+                        noteColBuff[pos++] = b;
+                        noteColBuff[pos++] = a;
+                        noteColBuff[pos++] = r2;
+                        noteColBuff[pos++] = g2;
+                        noteColBuff[pos++] = b2;
+                        noteColBuff[pos++] = a2;
+                        noteColBuff[pos++] = r2;
+                        noteColBuff[pos++] = g2;
+                        noteColBuff[pos++] = b2;
+                        noteColBuff[pos++] = a2;
+
+                        pos = noteBuffPos * 4;
+                        noteShadeBuff[pos++] = shade;
+                        noteShadeBuff[pos++] = shade;
+                        noteShadeBuff[pos++] = shade;
+                        noteShadeBuff[pos++] = shade;
+
+                        noteBuffPos++;
+                        FlushNoteBuffer();
+
+                    }
+                    else break;
+                }
+            }
+
+            FlushNoteBuffer(false);
+            noteBuffPos = 0;
+            GL.DepthFunc(DepthFunction.Less);
+
+            LastNoteCount = nc;
+            #endregion
+
             #region Keyboard
             Color4[] origColors = new Color4[257];
             for (int k = firstNote; k < lastNote; k++)
@@ -416,6 +905,17 @@ void main()
                 else
                     origColors[k] = Color4.White;
             }
+
+            GL.UseProgram(whiteKeyShader);
+
+            GL.BindBuffer(BufferTarget.ArrayBuffer, whiteKeyVert);
+            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Double, false, 24, 0);
+            GL.BindBuffer(BufferTarget.ArrayBuffer, whiteKeyCol);
+            GL.VertexAttribPointer(1, 1, VertexAttribPointerType.Float, false, 4, 0);
+            GL.BindBuffer(BufferTarget.ArrayBuffer, whiteKeyBlend);
+            GL.VertexAttribPointer(2, 1, VertexAttribPointerType.Float, false, 4, 0);
+            GL.BindBuffer(BufferTarget.ElementArrayBuffer, whiteKeyIndx);
+            GL.IndexPointer(IndexPointerType.Int, 1, 0);
 
             for (int n = firstNote; n < lastNote; n++)
             {
@@ -466,14 +966,14 @@ void main()
                 var coll = keyColors[n * 2];
                 var colr = keyColors[n * 2 + 1];
                 var origcol = origColors[n];
-                float blendfac = coll.A;
+                float blendfac = coll.A * 0.8f;
                 float revblendfac = 1 - blendfac;
                 coll = new Color4(
                     coll.R * blendfac + origcol.R * revblendfac,
                     coll.G * blendfac + origcol.G * revblendfac,
                     coll.B * blendfac + origcol.B * revblendfac,
                     1);
-                blendfac = colr.A;
+                blendfac = colr.A * 0.8f;
                 revblendfac = 1 - blendfac;
                 colr = new Color4(
                     colr.R * blendfac + origcol.R * revblendfac,
@@ -486,107 +986,28 @@ void main()
 
                 mvp = Matrix4.Identity *
                     Matrix4.CreateScale(0.95f, 1, 1) *
+                    Matrix4.CreateTranslation(0, (float)-keyPressFactor[n] / 2 - 0.3f, 0) *
                     Matrix4.CreateScale(wdth, wdth2, wdth2) *
                     Matrix4.CreateTranslation(x1, 0, 0) *
-                    Matrix4.CreateTranslation(0, -0.5f, 0.4f) *
+                    Matrix4.CreateTranslation(0, -(float)viewheight, -(float)viewoffset) *
                     Matrix4.CreateScale(1, 1, -1) *
-                    Matrix4.CreateRotationX(0.6f) *
-                    Matrix4.CreatePerspectiveFieldOfView(3.1415f / 3, (float)renderSettings.width / (float)renderSettings.height, 0.01f, 400)
+                    Matrix4.CreateRotationX((float)camAng) *
+                    Matrix4.CreatePerspectiveFieldOfView((float)fov, (float)aspect, 0.01f, 400)
                     ;
 
                 GL.UniformMatrix4(uWhiteKeyMVP, false, ref mvp);
-                GL.DrawElements(PrimitiveType.Quads, indexes.Length, DrawElementsType.UnsignedInt, IntPtr.Zero);
+                GL.DrawElements(PrimitiveType.Quads, whiteKeyBufferLen, DrawElementsType.UnsignedInt, IntPtr.Zero);
             }
 
             GL.UseProgram(blackKeyShader);
 
-            float blackkeylen = 7;
-            verts = new double[] {
-                //front
-                0, 0, -blackkeylen,
-                0, 1, -blackkeylen + 1,
-                1, 1, -blackkeylen + 1,
-                1, 0, -blackkeylen,
-                //top
-                0, 1, -blackkeylen + 1,
-                0, 1, -0,
-                1, 1, -0,
-                1, 1, -blackkeylen + 1,
-                //left
-                0, 0, 0,
-                0, 0, -blackkeylen,
-                0, 1, -blackkeylen + 1,
-                0, 1, 0,
-                //left
-                1, 0, 0,
-                1, 0, -blackkeylen,
-                1, 1, -blackkeylen + 1,
-                1, 1, 0,
-            };
-
-            cols = new float[] {
-                //front
-                0.8f,
-                0.9f,
-                0.9f,
-                0.8f,                
-                //top
-                1f,
-                1f,
-                1f,
-                1f,              
-                //left
-                0.8f,
-                0.8f,
-                0.9f,
-                0.8f,        
-                //right
-                0.8f,
-                0.8f,
-                0.9f,
-                0.8f,
-            };
-            blend = new float[] {
-                //front
-                1, 1, 1, 1,
-                //front
-                1, 0, 0, 1,
-                //left
-                0, 1, 1, 0,
-                //right
-                0, 1, 1, 0,
-            };
-
-            indexes = new int[16];
-            for (int i = 0; i < indexes.Length; i++) indexes[i] = i;
-
             GL.BindBuffer(BufferTarget.ArrayBuffer, blackKeyVert);
-            GL.BufferData(
-                BufferTarget.ArrayBuffer,
-                (IntPtr)(verts.Length * 8),
-                verts,
-                BufferUsageHint.StaticDraw);
             GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Double, false, 24, 0);
             GL.BindBuffer(BufferTarget.ArrayBuffer, blackKeyCol);
-            GL.BufferData(
-                BufferTarget.ArrayBuffer,
-                (IntPtr)(cols.Length * 4),
-                cols,
-                BufferUsageHint.StaticDraw);
             GL.VertexAttribPointer(1, 1, VertexAttribPointerType.Float, false, 4, 0);
             GL.BindBuffer(BufferTarget.ArrayBuffer, blackKeyBlend);
-            GL.BufferData(
-                BufferTarget.ArrayBuffer,
-                (IntPtr)(blend.Length * 4),
-                blend,
-                BufferUsageHint.StaticDraw);
             GL.VertexAttribPointer(2, 1, VertexAttribPointerType.Float, false, 4, 0);
             GL.BindBuffer(BufferTarget.ElementArrayBuffer, blackKeyIndx);
-            GL.BufferData(
-                BufferTarget.ElementArrayBuffer,
-                (IntPtr)(indexes.Length * 4),
-                indexes,
-                BufferUsageHint.StaticDraw);
             GL.IndexPointer(IndexPointerType.Int, 1, 0);
 
             for (int n = firstNote; n < lastNote; n++)
@@ -600,34 +1021,38 @@ void main()
                 var coll = keyColors[n * 2];
                 var colr = keyColors[n * 2 + 1];
                 var origcol = origColors[n];
-                float blendfac = coll.A;
+                float blendfac = coll.A * 0.8f;
                 float revblendfac = 1 - blendfac;
                 coll = new Color4(
                     coll.R * blendfac + origcol.R * revblendfac,
                     coll.G * blendfac + origcol.G * revblendfac,
                     coll.B * blendfac + origcol.B * revblendfac,
                     1);
-                blendfac = colr.A;
+                blendfac = colr.A * 0.8f;
                 revblendfac = 1 - blendfac;
                 colr = new Color4(
                     colr.R * blendfac + origcol.R * revblendfac,
                     colr.G * blendfac + origcol.G * revblendfac,
                     colr.B * blendfac + origcol.B * revblendfac,
                     1);
-                
+
+                GL.Uniform4(uBlackKeycoll, coll);
+                GL.Uniform4(uBlackKeycolr, colr);
+
                 mvp = Matrix4.Identity *
                     Matrix4.CreateScale(0.95f, 1, 1) *
                     Matrix4.CreateTranslation(0, 2, 0) *
+                    Matrix4.CreateTranslation(0, (float)-keyPressFactor[n] / 2 - 0.3f, 0) *
                     Matrix4.CreateScale(wdth, wdth, wdth) *
                     Matrix4.CreateTranslation(x1, 0, 0) *
-                    Matrix4.CreateTranslation(0, -0.5f, 0.4f) *
+                    Matrix4.CreateTranslation(0, -(float)viewheight, -(float)viewoffset) *
                     Matrix4.CreateScale(1, 1, -1) *
-                    Matrix4.CreateRotationX(0.6f) *
-                    Matrix4.CreatePerspectiveFieldOfView(3.1415f / 3, (float)renderSettings.width / (float)renderSettings.height, 0.01f, 400)
+                    Matrix4.CreateRotationX((float)camAng) *
+                    Matrix4.CreatePerspectiveFieldOfView((float)fov, (float)aspect, 0.01f, 400)
                     ;
 
                 GL.UniformMatrix4(uWhiteKeyMVP, false, ref mvp);
-                GL.DrawElements(PrimitiveType.Quads, indexes.Length, DrawElementsType.UnsignedInt, IntPtr.Zero);
+                GL.DrawElements(PrimitiveType.Quads, blackKeyBufferLen, DrawElementsType.UnsignedInt, IntPtr.Zero);
             }
             #endregion
 
@@ -658,6 +1083,37 @@ void main()
                     trakcs[i][j * 2 + 1] = Color4.FromHsv(new OpenTK.Vector4((i * 16 + j) * 1.36271f % 1, 1.0f, 1, 1f));
                 }
             }
+        }
+
+        void FlushNoteBuffer(bool check = true)
+        {
+            if (noteBuffPos < noteBuffLen && check) return;
+            if (noteBuffPos == 0) return;
+            GL.BindBuffer(BufferTarget.ArrayBuffer, noteVert);
+            GL.BufferData(
+                BufferTarget.ArrayBuffer,
+                (IntPtr)(noteVertBuff.Length * 8),
+                noteVertBuff,
+                BufferUsageHint.StaticDraw);
+            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Double, false, 24, 0);
+            GL.BindBuffer(BufferTarget.ArrayBuffer, noteCol);
+            GL.BufferData(
+                BufferTarget.ArrayBuffer,
+                (IntPtr)(noteColBuff.Length * 4),
+                noteColBuff,
+                BufferUsageHint.StaticDraw);
+            GL.VertexAttribPointer(1, 4, VertexAttribPointerType.Float, false, 16, 0);
+            GL.BindBuffer(BufferTarget.ArrayBuffer, noteShade);
+            GL.BufferData(
+                BufferTarget.ArrayBuffer,
+                (IntPtr)(noteShadeBuff.Length * 4),
+                noteShadeBuff,
+                BufferUsageHint.StaticDraw);
+            GL.VertexAttribPointer(2, 1, VertexAttribPointerType.Float, false, 4, 0);
+            GL.BindBuffer(BufferTarget.ElementArrayBuffer, noteIndx);
+            GL.IndexPointer(IndexPointerType.Int, 1, 0);
+            GL.DrawElements(PrimitiveType.Quads, noteBuffPos * 4, DrawElementsType.UnsignedInt, IntPtr.Zero);
+            noteBuffPos = 0;
         }
 
         bool isBlackNote(int n)
