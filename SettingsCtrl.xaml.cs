@@ -23,6 +23,7 @@ namespace MidiTrailRender
     public partial class SettingsCtrl : UserControl
     {
         Settings settings;
+        public AuraSelect auraselect;
 
         public void SetValues()
         {
@@ -32,12 +33,17 @@ namespace MidiTrailRender
             noteUpSpeed.Value = (decimal)settings.noteUpSpeed;
             boxNotes.IsChecked = settings.boxNotes;
             useVel.IsChecked = settings.useVel;
+            notesChangeSize.IsChecked = settings.notesChangeSize;
+            notesChangeTint.IsChecked = settings.notesChangeTint;
+            sameWidthNotes.IsChecked = settings.sameWidthNotes; 
             noteDeltaScreenTime.Value = Math.Log(settings.deltaTimeOnScreen, 2);
             camHeight.Value = (decimal)settings.viewHeight;
             camOffset.Value = (decimal)settings.viewOffset;
             FOVSlider.Value = settings.FOV / Math.PI * 180;
             viewAngSlider.Value = settings.camAng / Math.PI * 180;
             renderDistSlider.Value = settings.viewdist;
+            renderDistBackSlider.Value = settings.viewback;
+            auraselect.LoadSettings();
         }
 
         public SettingsCtrl(Settings settings) : base()
@@ -45,6 +51,13 @@ namespace MidiTrailRender
             InitializeComponent();
             this.settings = settings;
             LoadSettings(true);
+            auraselect = new AuraSelect(settings);
+            auraSubControlGrid.Children.Add(auraselect);
+            auraselect.Margin = new Thickness(0);
+            auraselect.HorizontalAlignment = HorizontalAlignment.Stretch;
+            auraselect.VerticalAlignment = VerticalAlignment.Stretch;
+            auraselect.Width = double.NaN;
+            auraselect.Height = double.NaN;
             SetValues();
         }
 
@@ -131,6 +144,16 @@ namespace MidiTrailRender
             catch { }
         }
 
+        private void RenderDistBackSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            try
+            {
+                settings.viewback = (double)renderDistBackSlider.Value;
+                renderDistBackVal.Content = Math.Round(renderDistBackSlider.Value).ToString();
+            }
+            catch { }
+        }
+
         private void FarPreset_Click(object sender, RoutedEventArgs e)
         {
             camHeight.Value = 0.5M;
@@ -138,6 +161,7 @@ namespace MidiTrailRender
             FOVSlider.Value = 60;
             viewAngSlider.Value = 32.08;
             renderDistSlider.Value = 14;
+            renderDistBackSlider.Value = 0.2;
         }
 
         private void MediumPreset_Click(object sender, RoutedEventArgs e)
@@ -147,6 +171,7 @@ namespace MidiTrailRender
             FOVSlider.Value = 60;
             viewAngSlider.Value = 34.98;
             renderDistSlider.Value = 5.52;
+            renderDistBackSlider.Value = 0.2;
         }
 
         private void ClosePreset_Click(object sender, RoutedEventArgs e)
@@ -156,6 +181,17 @@ namespace MidiTrailRender
             FOVSlider.Value = 60;
             viewAngSlider.Value = 61.11;
             renderDistSlider.Value = 1.25;
+            renderDistBackSlider.Value = 0.2;
+        }
+
+        private void CloserPreset_Click(object sender, RoutedEventArgs e)
+        {
+            camHeight.Value = 0.55M;
+            camOffset.Value = 0.33M;
+            FOVSlider.Value = 60;
+            viewAngSlider.Value = 39.62;
+            renderDistSlider.Value = 3.06;
+            renderDistBackSlider.Value = 0.2;
         }
 
         private void SaveButton_Click(object sender, RoutedEventArgs e)
@@ -204,6 +240,18 @@ namespace MidiTrailRender
             try
             {
                 settings.useVel = (bool)useVel.IsChecked;
+            }
+            catch { }
+        }
+
+        private void CheckboxChecked(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (sender == notesChangeSize) settings.notesChangeSize = (bool)notesChangeSize.IsChecked;
+                if (sender == notesChangeTint) settings.notesChangeTint = (bool)notesChangeTint.IsChecked;
+                if (sender == eatNotes) settings.eatNotes = (bool)eatNotes.IsChecked;
+                if (sender == sameWidthNotes) settings.sameWidthNotes = (bool)sameWidthNotes.IsChecked;
             }
             catch { }
         }

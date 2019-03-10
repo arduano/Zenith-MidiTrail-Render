@@ -25,14 +25,19 @@
                     <Label Content="Note Speed" HorizontalAlignment="Left" Margin="10,88,0,0" VerticalAlignment="Top"/>
                     <Slider x:Name="noteDeltaScreenTime" IsSnapToTickEnabled="True" TickPlacement="BottomRight" HorizontalAlignment="Left" Margin="88,94,0,0" VerticalAlignment="Top" Width="236" Maximum="13" Minimum="2" Value="1" TickFrequency="0.2" ValueChanged="NoteDeltaScreenTime_ValueChanged"/>
                     <Label x:Name="screenTime" Content="Label" HorizontalAlignment="Left" Margin="329,88,0,0" VerticalAlignment="Top"/>
-                    <CheckBox x:Name="useVel" Content="Strength from Note Velocity" HorizontalAlignment="Left" Margin="10,119,0,0" VerticalAlignment="Top" Checked="UseVel_Checked" />
+                    <CheckBox x:Name="useVel" Content="Strength from Note Velocity" HorizontalAlignment="Left" Margin="10,119,0,0" VerticalAlignment="Top" Checked="UseVel_Checked" Unchecked="UseVel_Checked" />
+                    <CheckBox x:Name="eatNotes" Content="Keyboard Eats Notes" HorizontalAlignment="Left" Margin="10,139,0,0" VerticalAlignment="Top" Checked="CheckboxChecked" Unchecked="CheckboxChecked"/>
+                    <Label Content="On note hit:" HorizontalAlignment="Left" Margin="10,179,0,0" VerticalAlignment="Top"/>
+                    <CheckBox x:Name="notesChangeSize" Content="Change Size" HorizontalAlignment="Left" Margin="10,205,0,0" VerticalAlignment="Top" Unchecked="CheckboxChecked" Checked="CheckboxChecked"/>
+                    <CheckBox x:Name="notesChangeTint" Content="Change Tint" HorizontalAlignment="Left" Margin="10,225,0,0" VerticalAlignment="Top" Checked="CheckboxChecked" Unchecked="CheckboxChecked"/>
+                    <CheckBox x:Name="sameWidthNotes" Content="Same Width Notes" HorizontalAlignment="Left" Margin="10,159,0,0" VerticalAlignment="Top" Checked="CheckboxChecked" Unchecked="CheckboxChecked"/>
                 </Grid>
             </TabItem>
             <TabItem Header="Camera">
                 <Grid Background="#FFE5E5E5">
                     <Label Content="WARNING: This plug-in can use much more ram and CPU due to the higher note time &#xA;on screen. The more notes are visible, the slower the render!" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top"/>
                     <Button x:Name="farPreset" Content="Far" HorizontalAlignment="Left" Margin="64,57,0,0" VerticalAlignment="Top" Width="75" Click="FarPreset_Click"/>
-                    <Button x:Name="closePreset" Content="Close" HorizontalAlignment="Left" Margin="224,57,0,0" VerticalAlignment="Top" Width="75" Click="ClosePreset_Click"/>
+                    <Button x:Name="closePreset" Content="Closest" HorizontalAlignment="Left" Margin="304,57,0,0" VerticalAlignment="Top" Width="75" Click="ClosePreset_Click"/>
                     <Button x:Name="mediumPreset" Content="Medium" HorizontalAlignment="Left" Margin="144,57,0,0" VerticalAlignment="Top" Width="75" Click="MediumPreset_Click"/>
                     <Label Content="Presets:" HorizontalAlignment="Left" Margin="10,54,0,0" VerticalAlignment="Top"/>
                     <Label Content="FOV:" HorizontalAlignment="Left" Margin="10,85,0,0" VerticalAlignment="Top"/>
@@ -41,17 +46,24 @@
                     <Label Content="View Angle" HorizontalAlignment="Left" Margin="10,113,0,0" VerticalAlignment="Top"/>
                     <Slider x:Name="viewAngSlider" HorizontalAlignment="Left" Margin="76,118,0,0" VerticalAlignment="Top" Width="166" Maximum="90" Minimum="0" SmallChange="0.1" Value="60" Height="18" ValueChanged="ViewAngSlider_ValueChanged"/>
                     <Label x:Name="viewAngVal" Content="" HorizontalAlignment="Left" Margin="247,113,0,0" VerticalAlignment="Top"/>
-                    <Label Content="Camera Offsets" HorizontalAlignment="Left" Margin="10,172,0,0" VerticalAlignment="Top"/>
-                    <Label Content="Horizontal:" HorizontalAlignment="Left" Margin="114,172,0,0" VerticalAlignment="Top"/>
-                    <xctk:DecimalUpDown x:Name="camOffset" FormatString="F2" Value="0.0" Increment="0.01"  Maximum="5" Minimum="0" Margin="187,172,0,0" HorizontalAlignment="Left" Width="65" Height="26" VerticalAlignment="Top" ValueChanged="Nud_ValueChanged"  />
-                    <Label Content="Vertical:" HorizontalAlignment="Left" Margin="257,172,0,0" VerticalAlignment="Top"/>
-                    <xctk:DecimalUpDown x:Name="camHeight" FormatString="F2" Value="0.0" Increment="0.01"  Maximum="5" Minimum="0" Margin="313,172,0,0" HorizontalAlignment="Left" Width="64" Height="26" VerticalAlignment="Top" ValueChanged="Nud_ValueChanged"  />
-                    <Label Content="Note Render Dist." HorizontalAlignment="Left" Margin="10,144,0,0" VerticalAlignment="Top"/>
-                    <Slider x:Name="renderDistSlider" HorizontalAlignment="Left" Margin="114,149,0,0" VerticalAlignment="Top" Width="353" Maximum="20" Minimum="0" SmallChange="0.1" Value="60" Height="18" ValueChanged="RenderDistSlider_ValueChanged"/>
+                    <Label Content="Camera Offsets" HorizontalAlignment="Left" Margin="10,198,0,0" VerticalAlignment="Top"/>
+                    <Label Content="Horizontal:" HorizontalAlignment="Left" Margin="114,198,0,0" VerticalAlignment="Top"/>
+                    <xctk:DecimalUpDown x:Name="camOffset" FormatString="F2" Value="0.0" Increment="0.01"  Maximum="15" Minimum="-20" Margin="187,198,0,0" HorizontalAlignment="Left" Width="65" Height="26" VerticalAlignment="Top" ValueChanged="Nud_ValueChanged"  />
+                    <Label Content="Vertical:" HorizontalAlignment="Left" Margin="257,198,0,0" VerticalAlignment="Top"/>
+                    <xctk:DecimalUpDown x:Name="camHeight" FormatString="F2" Value="0.0" Increment="0.01"  Maximum="10" Minimum="0" Margin="313,198,0,0" HorizontalAlignment="Left" Width="64" Height="26" VerticalAlignment="Top" ValueChanged="Nud_ValueChanged"  />
+                    <Label Content="Note Render Dist. Forwards" HorizontalAlignment="Left" Margin="10,144,0,0" VerticalAlignment="Top"/>
+                    <Slider x:Name="renderDistSlider" HorizontalAlignment="Left" Margin="177,149,0,0" VerticalAlignment="Top" Width="290" Maximum="20" Minimum="0" SmallChange="0.1" Value="60" Height="18" ValueChanged="RenderDistSlider_ValueChanged"/>
                     <Label x:Name="renderDistVal" Content="" HorizontalAlignment="Left" Margin="472,144,0,0" VerticalAlignment="Top"/>
+                    <Button x:Name="closerPreset" Content="Closer" HorizontalAlignment="Left" Margin="224,57,0,0" VerticalAlignment="Top" Width="75" Click="CloserPreset_Click"/>
+                    <Label Content="Note Render Dist. Backwards" HorizontalAlignment="Left" Margin="10,170,0,0" VerticalAlignment="Top"/>
+                    <Slider x:Name="renderDistBackSlider" HorizontalAlignment="Left" Margin="177,175,0,0" VerticalAlignment="Top" Width="290" Maximum="20" Minimum="0" SmallChange="0.1" Value="60" Height="18" ValueChanged="RenderDistBackSlider_ValueChanged"/>
+                    <Label x:Name="renderDistBackVal" Content="" HorizontalAlignment="Left" Margin="472,170,0,0" VerticalAlignment="Top"/>
+                </Grid>
+            </TabItem>
+            <TabItem Header="Aura">
+                <Grid x:Name="auraSubControlGrid" Background="#FFE5E5E5">
                 </Grid>
             </TabItem>
         </TabControl>
-
     </Grid>
 </UserControl>

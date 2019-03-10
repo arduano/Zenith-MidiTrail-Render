@@ -1,10 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using BMEngine;
 using OpenTK;
 using OpenTK.Graphics;
@@ -14,6 +18,24 @@ namespace MidiTrailRender
 {
     public class Render : IPluginRender
     {
+        #region PreviewConvert
+        BitmapImage BitmapToImageSource(Bitmap bitmap)
+        {
+            using (MemoryStream memory = new MemoryStream())
+            {
+                bitmap.Save(memory, System.Drawing.Imaging.ImageFormat.Bmp);
+                memory.Position = 0;
+                BitmapImage bitmapimage = new BitmapImage();
+                bitmapimage.BeginInit();
+                bitmapimage.StreamSource = memory;
+                bitmapimage.CacheOption = BitmapCacheOption.OnLoad;
+                bitmapimage.EndInit();
+
+                return bitmapimage;
+            }
+        }
+        #endregion
+
         public string Name => "MidiTrail+";
         public string Description => "Clone of the popular tool MidiTrail for black midi rendering. Added exclusive bonus features, and less buggy.";
 
@@ -105,6 +127,39 @@ void main()
     out_color = v2f_color;
 }
 ";
+        string circleShaderVert = @"#version 330 core
+
+layout(location=0) in vec3 in_position;
+layout(location=1) in vec4 in_color;
+layout(location=2) in vec2 in_uv;
+
+out vec4 v2f_color;
+out vec2 uv;
+
+uniform mat4 MVP;
+
+void main()
+{
+    gl_Position = MVP * vec4(in_position, 1.0);
+    v2f_color = in_color;
+    uv = in_uv;
+}
+";
+        string circleShaderFrag = @"#version 330 core
+
+in vec4 v2f_color;
+in vec2 uv;
+
+uniform sampler2D textureSampler;
+
+layout (location=0) out vec4 out_color;
+
+void main()
+{
+    out_color = v2f_color;
+    out_color.w *=  texture2D( textureSampler, uv ).w;
+}
+";
 
         int MakeShader(string vert, string frag)
         {
@@ -136,6 +191,7 @@ void main()
         int whiteKeyShader;
         int blackKeyShader;
         int noteShader;
+        int circleShader;
 
         int uWhiteKeyMVP;
         int uWhiteKeycoll;
@@ -147,6 +203,8 @@ void main()
 
         int uNoteMVP;
 
+        int uCircleMVP;
+
         public bool ManualNoteDelete => false;
 
         public double LastMidiTimePerTick { get; set; } = 500000 / 96.0;
@@ -155,9 +213,17 @@ void main()
 
         public long LastNoteCount { get; private set; }
 
-        public Control SettingsControl { get; private set; }
+        SettingsCtrl settingsCtrl;
+        public Control SettingsControl => settingsCtrl;
 
-        public int NoteCollectorOffset => -(int)(settings.deltaTimeOnScreen * 0.2);
+        public int NoteCollectorOffset
+        {
+            get
+            {
+                if (settings.eatNotes) return 0;
+                return -(int)(settings.deltaTimeOnScreen * settings.viewback);
+            }
+        }
 
         bool[] blackKeys = new bool[257];
         int[] keynum = new int[257];
@@ -191,8 +257,42 @@ void main()
 
         int noteBuffPos = 0;
 
+        int circleVert;
+        int circleColor;
+        int circleUV;
+        int circleIndx;
+
+        double[] circleVertBuff;
+        float[] circleColorBuff;
+        double[] circleUVBuff;
+        int[] circleIndxBuff;
+
+        int circleBuffPos = 0;
+
+        long lastAuraTexChange;
+        int auraTex;
+
+        void loadImage(Bitmap image, int texID)
+        {
+            GL.BindTexture(TextureTarget.Texture2D, texID);
+            BitmapData data = image.LockBits(new System.Drawing.Rectangle(0, 0, image.Width, image.Height),
+                ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+
+            GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba, data.Width, data.Height, 0,
+                OpenTK.Graphics.OpenGL.PixelFormat.Bgra, PixelType.UnsignedByte, data.Scan0);
+
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+
+            image.UnlockBits(data);
+        }
+
         public void Dispose()
         {
+            lastAuraTexChange = 0;
+            GL.DeleteTexture(auraTex);
             GL.DeleteBuffers(12, new int[] {
                 whiteKeyVert, whiteKeyCol, blackKeyVert, blackKeyCol,
                 whiteKeyIndx, blackKeyIndx, whiteKeyBlend, blackKeyBlend,
@@ -208,7 +308,7 @@ void main()
         {
             this.settings = new Settings();
             this.renderSettings = settings;
-            SettingsControl = new SettingsCtrl(this.settings);
+            settingsCtrl = new SettingsCtrl(this.settings);
             //PreviewImage = BitmapToImageSource(Properties.Resources.preview);
             for (int i = 0; i < blackKeys.Length; i++) blackKeys[i] = isBlackNote(i);
             int b = 0;
@@ -220,6 +320,12 @@ void main()
             }
         }
 
+        void ReloadAuraTexture()
+        {
+            loadImage(settingsCtrl.auraselect.SelectedImage, auraTex);
+            lastAuraTexChange = settingsCtrl.auraselect.lastSetTime;
+        }
+
         int whiteKeyBufferLen = 0;
         int blackKeyBufferLen = 0;
         public void Init()
@@ -227,6 +333,7 @@ void main()
             whiteKeyShader = MakeShader(whiteKeyShaderVert, whiteKeyShaderFrag);
             blackKeyShader = MakeShader(blackKeyShaderVert, blackKeyShaderFrag);
             noteShader = MakeShader(noteShaderVert, noteShaderFrag);
+            circleShader = MakeShader(circleShaderVert, circleShaderFrag);
 
             uWhiteKeyMVP = GL.GetUniformLocation(whiteKeyShader, "MVP");
             uWhiteKeycoll = GL.GetUniformLocation(whiteKeyShader, "coll");
@@ -237,6 +344,7 @@ void main()
             uBlackKeycolr = GL.GetUniformLocation(blackKeyShader, "colr");
 
             uNoteMVP = GL.GetUniformLocation(noteShader, "MVP");
+            uCircleMVP = GL.GetUniformLocation(circleShader, "MVP");
 
             GLUtils.GenFrameBufferTexture(renderSettings.width, renderSettings.height, out buffer3dbuf, out buffer3dtex, true);
 
@@ -260,11 +368,21 @@ void main()
             noteIndx = GL.GenBuffer();
             noteShade = GL.GenBuffer();
 
+            circleVert = GL.GenBuffer();
+            circleColor = GL.GenBuffer();
+            circleUV = GL.GenBuffer();
+            circleIndx = GL.GenBuffer();
+            
             noteVertBuff = new double[noteBuffLen * 4 * 3];
             noteColBuff = new float[noteBuffLen * 4 * 4];
             noteShadeBuff = new float[noteBuffLen * 4];
 
             noteIndxBuff = new int[noteBuffLen * 4];
+
+            circleVertBuff = new double[256 * 4 * 3];
+            circleColorBuff = new float[256 * 4 * 4];
+            circleUVBuff = new double[256 * 4 * 2];
+            circleIndxBuff = new int[256 * 4];
 
             for (int i = 0; i < noteIndxBuff.Length; i++) noteIndxBuff[i] = i;
             GL.BindBuffer(BufferTarget.ElementArrayBuffer, noteIndx);
@@ -274,8 +392,22 @@ void main()
                 noteIndxBuff,
                 BufferUsageHint.StaticDraw);
 
+            for (int i = 0; i < circleIndxBuff.Length; i++) circleIndxBuff[i] = i;
+            GL.BindBuffer(BufferTarget.ElementArrayBuffer, circleIndx);
+            GL.BufferData(
+                BufferTarget.ElementArrayBuffer,
+                (IntPtr)(circleIndxBuff.Length * 4),
+                circleIndxBuff,
+                BufferUsageHint.StaticDraw);
+
+            auraTex = GL.GenTexture();
+
+            ReloadAuraTexture();
+
+            float whitekeylen = 5.0f;
+            float blackkeylen = 6.9f;
+
             #region White Key Model
-            float whitekeylen = 5.5f;
             double[] verts = new double[] {
                 //front
                 0, 0, -whitekeylen,
@@ -311,6 +443,11 @@ void main()
                 1, 1, 0,
                 1, 1, -whitekeylen,
                 1, 0, -whitekeylen,
+                1, 0, 0,
+                //back
+                0, 0, 0,
+                0, 1, 0,
+                1, 1, 0,
                 1, 0, 0,
             };
 
@@ -350,6 +487,11 @@ void main()
                 0.6f,
                 0.6f,
                 0.6f,
+                //back
+                0.8f,
+                0.8f,
+                0.8f,
+                0.8f,
             };
             float[] blend = new float[] {
                 //front
@@ -366,9 +508,12 @@ void main()
                 0, 1, 1, 0,
                 //right
                 0, 1, 1, 0,
+                
+                //back
+                0, 0, 0, 0,
             };
 
-            int[] indexes = new int[28];
+            int[] indexes = new int[32];
             for (int i = 0; i < indexes.Length; i++) indexes[i] = i;
             whiteKeyBufferLen = indexes.Length;
 
@@ -399,7 +544,6 @@ void main()
             #endregion
 
             #region Black Key Model
-            float blackkeylen = 7.5f;
             verts = new double[] {
                 //front
                 0, 0, -blackkeylen,
@@ -421,6 +565,11 @@ void main()
                 1, 0, -blackkeylen,
                 1, 1, -blackkeylen + 1,
                 1, 1, 0,
+                //back
+                0, 0, 0,
+                0, 1, 0,
+                1, 1, 0,
+                1, 0, 0,
             };
 
             cols = new float[] {
@@ -443,7 +592,12 @@ void main()
                 0.8f,
                 0.8f,
                 0.9f,
-                0.8f,
+                0.8f,        
+                //back
+                0.9f,
+                0.9f,
+                0.9f,
+                0.9f,
             };
             blend = new float[] {
                 //front
@@ -454,9 +608,11 @@ void main()
                 0, 1, 1, 0,
                 //right
                 0, 1, 1, 0,
+                //back
+                0, 0, 0, 0,
             };
 
-            indexes = new int[16];
+            indexes = new int[20];
             for (int i = 0; i < indexes.Length; i++) indexes[i] = i;
             blackKeyBufferLen = indexes.Length;
 
@@ -491,8 +647,10 @@ void main()
         double[] x1array = new double[257];
         double[] wdtharray = new double[257];
         double[] keyPressFactor = new double[257];
+        double[] auraSize = new double[256];
         public void RenderFrame(FastList<Note> notes, double midiTime, int finalCompositeBuff)
         {
+            if (lastAuraTexChange != settingsCtrl.auraselect.lastSetTime) ReloadAuraTexture();
             GL.Enable(EnableCap.Blend);
             GL.EnableClientState(ArrayCap.VertexArray);
             GL.EnableClientState(ArrayCap.ColorArray);
@@ -520,15 +678,24 @@ void main()
             double noteUpSpeed = settings.noteUpSpeed;
             bool blockNotes = settings.boxNotes;
             bool useVel = settings.useVel;
+            bool changeSize = settings.notesChangeSize;
+            bool changeTint = settings.notesChangeTint;
+            double tempoFrameStep = 1 / LastMidiTimePerTick * (1000000.0 / renderSettings.fps);
+            bool eatNotes = settings.eatNotes;
+            float auraStrength = (float)settings.auraStrength;
+            bool auraEnabled = settings.auraEnabled;
+
 
             double fov = settings.FOV;
             double aspect = (double)renderSettings.width / renderSettings.height;
             double viewdist = settings.viewdist;
+            double viewback = settings.viewback;
             double viewheight = settings.viewHeight;
             double viewoffset = -settings.viewOffset;
             double camAng = settings.camAng;
             fov /= 1;
             for (int i = 0; i < 514; i++) keyColors[i] = Color4.Transparent;
+            for (int i = 0; i < 256; i++) auraSize[i] = 0;
             for (int i = 0; i < keyPressFactor.Length; i++) keyPressFactor[i] = Math.Max(keyPressFactor[i] / 1.05 - noteUpSpeed, 0);
             float wdth;
             double wdthd;
@@ -541,6 +708,7 @@ void main()
             double y1;
             double y2;
             Matrix4 mvp;
+            double circleRadius;
             if (settings.sameWidthNotes)
             {
                 for (int i = 0; i < 257; i++)
@@ -548,6 +716,7 @@ void main()
                     x1array[i] = (float)(i - firstNote) / (lastNote - firstNote);
                     wdtharray[i] = 1.0f / (lastNote - firstNote);
                 }
+                circleRadius = 1.0f / (lastNote - firstNote);
             }
             else
             {
@@ -580,7 +749,9 @@ void main()
                         wdtharray[i] = wdth;
                     }
                 }
+                circleRadius = (float)(0.6f / (knmln - knmfn + 1));
             }
+
 
             #region Notes
             noteBuffPos = 0;
@@ -596,6 +767,7 @@ void main()
 
             double renderCutoff = midiTime + deltaTimeOnScreen;
             double renderStart = midiTime + NoteCollectorOffset;
+            double maxAuraLen = tempoFrameStep * renderSettings.fps;
 
             if (blockNotes)
             {
@@ -611,28 +783,45 @@ void main()
                             Color4 coll = n.track.trkColor[n.channel * 2];
                             Color4 colr = n.track.trkColor[n.channel * 2 + 1];
                             float shade = 0;
-                            if (n.start < midiTime && (n.end > midiTime || !n.hasEnded))
-                            {
-                                if (!n.hasEnded)
-                                    shade = 0.3f;
-                                else
-                                {
-                                    double len = n.end - n.start;
-                                    double offset = n.end - midiTime;
-                                    shade = (float)(Math.Pow(offset / len, 0.4) * 0.3);
-                                }
-                            }
-                            shade -= 0.3f;
                             x1d = x1array[k] - 0.5;
                             wdthd = wdtharray[k];
                             y1 = n.end - midiTime;
                             y2 = n.start - midiTime;
+                            if (eatNotes && y1 < 0) y1 = 0;
+                            if (eatNotes && y2 < 0) y2 = 0;
                             if (!n.hasEnded)
                                 y1 = viewdist * deltaTimeOnScreen;
                             y1 /= deltaTimeOnScreen / viewdist;
                             y2 /= deltaTimeOnScreen / viewdist;
 
                             if (x1d < 0) x1d += wdthd;
+                            if (n.start < midiTime && (n.end > midiTime || !n.hasEnded))
+                            {
+                                double factor = 0.5;
+                                if (n.hasEnded)
+                                {
+                                    double len = n.end - n.start;
+                                    double offset = n.end - midiTime;
+                                    if (offset > maxAuraLen) offset = maxAuraLen;
+                                    if (len > maxAuraLen) len = maxAuraLen;
+                                    factor = Math.Pow(offset / len, 0.3);
+                                    factor /= 2;
+                                }
+                                else
+                                {
+                                    factor = 0.5;
+                                }
+                                if (changeTint)
+                                    shade = (float)(factor * 0.7);
+                                if (changeSize)
+                                {
+                                    if (x1d > 0)
+                                        x1d -= wdthd * 0.3 * factor;
+                                    else
+                                        x1d += wdthd * 0.3 * factor;
+                                }
+                            }
+                            shade -= 0.3f;
 
                             r = coll.R;
                             g = coll.G;
@@ -703,27 +892,43 @@ void main()
                             Color4 coll = n.track.trkColor[n.channel * 2];
                             Color4 colr = n.track.trkColor[n.channel * 2 + 1];
                             float shade = 0;
-                            if (n.start < midiTime && (n.end > midiTime || !n.hasEnded))
-                            {
-                                if (!n.hasEnded)
-                                    shade = 0.3f;
-                                else
-                                {
-                                    double len = n.end - n.start;
-                                    double offset = n.end - midiTime;
-                                    shade = (float)(Math.Pow(offset / len, 0.4) * 0.3);
-                                }
-                            }
-                            shade -= 0.2f;
                             x1d = x1array[k] - 0.5;
                             wdthd = wdtharray[k];
                             x2d = x1d + wdthd;
                             y1 = n.end - midiTime;
                             y2 = n.start - midiTime;
+                            if (eatNotes && y1 < 0) y1 = 0;
+                            if (eatNotes && y2 < 0) y2 = 0;
                             if (!n.hasEnded)
                                 y1 = viewdist * deltaTimeOnScreen;
                             y1 /= deltaTimeOnScreen / viewdist;
                             y2 /= deltaTimeOnScreen / viewdist;
+                            if (y2 < viewoffset) y2 = y1;
+                            if (n.start < midiTime && (n.end > midiTime || !n.hasEnded))
+                            {
+                                double factor = 0.5;
+                                if (n.hasEnded)
+                                {
+                                    double len = n.end - n.start;
+                                    double offset = n.end - midiTime;
+                                    if (offset > maxAuraLen) offset = maxAuraLen;
+                                    if (len > maxAuraLen) len = maxAuraLen;
+                                    factor = Math.Pow(offset / len, 0.3);
+                                    factor /= 2;
+                                }
+                                else
+                                {
+                                    factor = 0.5;
+                                }
+                                if (changeTint)
+                                    shade = (float)(factor * 0.7);
+                                if (changeSize)
+                                {
+                                    x1d -= wdthd * 0.3 * factor;
+                                    x2d += wdthd * 0.3 * factor;
+                                }
+                            }
+                            shade -= 0.2f;
 
                             r = coll.R;
                             g = coll.G;
@@ -793,6 +998,19 @@ void main()
                         Color4 coll = n.track.trkColor[n.channel * 2];
                         Color4 colr = n.track.trkColor[n.channel * 2 + 1];
                         float shade = 0;
+
+                        x1d = x1array[k] - 0.5;
+                        wdthd = wdtharray[k];
+                        x2d = x1d + wdthd;
+                        y1 = n.end - midiTime;
+                        y2 = n.start - midiTime;
+                        if (eatNotes && y1 < 0) y1 = 0;
+                        if (eatNotes && y2 < 0) y2 = 0;
+                        if (!n.hasEnded)
+                            y1 = viewdist * deltaTimeOnScreen;
+                        y1 /= deltaTimeOnScreen / viewdist;
+                        y2 /= deltaTimeOnScreen / viewdist;
+
                         if (n.start < midiTime && (n.end > midiTime || !n.hasEnded))
                         {
                             Color4 origcoll = keyColors[k * 2];
@@ -815,24 +1033,32 @@ void main()
                                 keyPressFactor[k] = Math.Min(1, keyPressFactor[k] + noteDownSpeed * n.vel / 127.0);
                             else
                                 keyPressFactor[k] = Math.Min(1, keyPressFactor[k] + noteDownSpeed);
-                            if (!n.hasEnded)
-                                shade = 0.3f;
-                            else
+                            double factor = 0;
+                            double factor2 = Math.Pow(Math.Max(10 - (midiTime - n.start) / tempoFrameStep, 0), 2) / 600;
+                            if (n.hasEnded)
                             {
                                 double len = n.end - n.start;
                                 double offset = n.end - midiTime;
-                                shade = (float)(Math.Pow(offset / len, 0.4) * 0.3);
+                                if (offset > maxAuraLen) offset = maxAuraLen;
+                                if (len > maxAuraLen) len = maxAuraLen;
+                                factor = Math.Pow(offset / len, 0.3);
+                                factor /= 2;
+                            }
+                            else
+                            {
+                                factor = 0.5;
+                            }
+
+                            if (auraSize[k] < factor + factor2) auraSize[k] = factor  + factor2;
+
+                            if (changeTint)
+                                shade = (float)(factor * 0.7);
+                            if (changeSize)
+                            {
+                                x1d -= wdthd * 0.3 * factor;
+                                x2d += wdthd * 0.3 * factor;
                             }
                         }
-                        x1d = x1array[k] - 0.5;
-                        wdthd = wdtharray[k];
-                        x2d = x1d + wdthd;
-                        y1 = n.end - midiTime;
-                        y2 = n.start - midiTime;
-                        if (!n.hasEnded)
-                            y1 = viewdist * deltaTimeOnScreen;
-                        y1 /= deltaTimeOnScreen / viewdist;
-                        y2 /= deltaTimeOnScreen / viewdist;
 
                         r = coll.R;
                         g = coll.G;
@@ -891,10 +1117,162 @@ void main()
 
             FlushNoteBuffer(false);
             noteBuffPos = 0;
-            GL.DepthFunc(DepthFunction.Less);
 
             LastNoteCount = nc;
             #endregion
+
+            GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.One);
+
+            if (auraEnabled)
+            {
+                #region Aura
+
+                GL.UseProgram(circleShader);
+
+                GL.BindTexture(TextureTarget.Texture2D, auraTex);
+
+                mvp = Matrix4.Identity *
+                    Matrix4.CreateTranslation(0, -(float)viewheight, -(float)viewoffset) *
+                    Matrix4.CreateScale(1, 1, -1) *
+                    Matrix4.CreateRotationX((float)camAng) *
+                    Matrix4.CreatePerspectiveFieldOfView((float)fov, (float)aspect, 0.01f, 400)
+                    ;
+                GL.UniformMatrix4(uCircleMVP, false, ref mvp);
+
+                circleBuffPos = 0;
+                for (int n = firstNote; n < lastNote; n++)
+                {
+                    x1d = x1array[n] - 0.5;
+                    wdthd = wdtharray[n];
+                    x2d = x1d + wdthd;
+                    double size = circleRadius * 12 * auraSize[n];
+                    if (!blackKeys[n])
+                    {
+                        y2 = 0;
+                        if (settings.sameWidthNotes)
+                        {
+                            int _n = n % 12;
+                            if (_n == 0)
+                                x2d += wdthd * 0.666f;
+                            else if (_n == 2)
+                            {
+                                x1d -= wdthd / 3;
+                                x2d += wdthd / 3;
+                            }
+                            else if (_n == 4)
+                                x1d -= wdthd / 3 * 2;
+                            else if (_n == 5)
+                                x2d += wdthd * 0.75f;
+                            else if (_n == 7)
+                            {
+                                x1d -= wdthd / 4;
+                                x2d += wdthd / 2;
+                            }
+                            else if (_n == 9)
+                            {
+                                x1d -= wdthd / 2;
+                                x2d += wdthd / 4;
+                            }
+                            else if (_n == 11)
+                                x1d -= wdthd * 0.75f;
+                        }
+                    }
+
+                    Color4 coll = keyColors[n * 2];
+                    Color4 colr = keyColors[n * 2 + 1];
+
+                    r = coll.R * auraStrength;
+                    g = coll.G * auraStrength;
+                    b = coll.B * auraStrength;
+                    a = coll.A * auraStrength;
+                    r2 = colr.R * auraStrength;
+                    g2 = colr.G * auraStrength;
+                    b2 = colr.B * auraStrength;
+                    a2 = colr.A * auraStrength;
+
+                    double middle = (x1d + x2d) / 2;
+                    x1d = middle - size;
+                    x2d = middle + size;
+                    y1 = size;
+                    y2 = -size;
+
+
+                    int pos = circleBuffPos * 12;
+                    circleVertBuff[pos++] = x1d;
+                    circleVertBuff[pos++] = y1;
+                    circleVertBuff[pos++] = 0;
+                    circleVertBuff[pos++] = x1d;
+                    circleVertBuff[pos++] = y2;
+                    circleVertBuff[pos++] = 0;
+                    circleVertBuff[pos++] = x2d;
+                    circleVertBuff[pos++] = y2;
+                    circleVertBuff[pos++] = 0;
+                    circleVertBuff[pos++] = x2d;
+                    circleVertBuff[pos++] = y1;
+                    circleVertBuff[pos++] = 0;
+
+                    pos = circleBuffPos * 16;
+                    circleColorBuff[pos++] = r;
+                    circleColorBuff[pos++] = g;
+                    circleColorBuff[pos++] = b;
+                    circleColorBuff[pos++] = a;
+                    circleColorBuff[pos++] = r;
+                    circleColorBuff[pos++] = g;
+                    circleColorBuff[pos++] = b;
+                    circleColorBuff[pos++] = a;
+                    circleColorBuff[pos++] = r2;
+                    circleColorBuff[pos++] = g2;
+                    circleColorBuff[pos++] = b2;
+                    circleColorBuff[pos++] = a2;
+                    circleColorBuff[pos++] = r2;
+                    circleColorBuff[pos++] = g2;
+                    circleColorBuff[pos++] = b2;
+                    circleColorBuff[pos++] = a2;
+
+                    pos = circleBuffPos * 8;
+                    circleUVBuff[pos++] = 0;
+                    circleUVBuff[pos++] = 0;
+                    circleUVBuff[pos++] = 1;
+                    circleUVBuff[pos++] = 0;
+                    circleUVBuff[pos++] = 1;
+                    circleUVBuff[pos++] = 1;
+                    circleUVBuff[pos++] = 0;
+                    circleUVBuff[pos++] = 1;
+
+                    circleBuffPos++;
+                }
+                GL.BindBuffer(BufferTarget.ArrayBuffer, circleVert);
+                GL.BufferData(
+                    BufferTarget.ArrayBuffer,
+                    (IntPtr)(circleVertBuff.Length * 8),
+                    circleVertBuff,
+                    BufferUsageHint.StaticDraw);
+                GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Double, false, 24, 0);
+                GL.BindBuffer(BufferTarget.ArrayBuffer, circleColor);
+                GL.BufferData(
+                    BufferTarget.ArrayBuffer,
+                    (IntPtr)(circleColorBuff.Length * 4),
+                    circleColorBuff,
+                    BufferUsageHint.StaticDraw);
+                GL.VertexAttribPointer(1, 4, VertexAttribPointerType.Float, false, 16, 0);
+                GL.BindBuffer(BufferTarget.ArrayBuffer, circleUV);
+                GL.BufferData(
+                    BufferTarget.ArrayBuffer,
+                    (IntPtr)(circleUVBuff.Length * 8),
+                    circleUVBuff,
+                    BufferUsageHint.StaticDraw);
+                GL.VertexAttribPointer(2, 2, VertexAttribPointerType.Double, false, 16, 0);
+                GL.BindBuffer(BufferTarget.ElementArrayBuffer, circleIndx);
+                GL.IndexPointer(IndexPointerType.Int, 1, 0);
+                GL.DrawElements(PrimitiveType.Quads, circleBuffPos * 4, DrawElementsType.UnsignedInt, IntPtr.Zero);
+
+                GL.BindTexture(TextureTarget.Texture2D, 0);
+                #endregion
+            }
+
+            GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+
+            GL.DepthFunc(DepthFunction.Less);
 
             #region Keyboard
             Color4[] origColors = new Color4[257];
@@ -983,9 +1361,10 @@ void main()
 
                 GL.Uniform4(uWhiteKeycoll, coll);
                 GL.Uniform4(uWhiteKeycolr, colr);
-
+                float scale = 1;
+                if (!sameWidth) scale = 1.15f;
                 mvp = Matrix4.Identity *
-                    Matrix4.CreateScale(0.95f, 1, 1) *
+                    Matrix4.CreateScale(0.95f, 1, scale) *
                     Matrix4.CreateTranslation(0, (float)-keyPressFactor[n] / 2 - 0.3f, 0) *
                     Matrix4.CreateScale(wdth, wdth2, wdth2) *
                     Matrix4.CreateTranslation(x1, 0, 0) *
