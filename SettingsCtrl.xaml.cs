@@ -35,7 +35,9 @@ namespace MidiTrailRender
             useVel.IsChecked = settings.useVel;
             notesChangeSize.IsChecked = settings.notesChangeSize;
             notesChangeTint.IsChecked = settings.notesChangeTint;
-            sameWidthNotes.IsChecked = settings.sameWidthNotes; 
+            sameWidthNotes.IsChecked = settings.sameWidthNotes;
+            lightShade.IsChecked = settings.lightShade;
+            tiltKeys.IsChecked = settings.tiltKeys;
             noteDeltaScreenTime.Value = Math.Log(settings.deltaTimeOnScreen, 2);
             camHeight.Value = (decimal)settings.viewHeight;
             camOffset.Value = (decimal)settings.viewOffset;
@@ -46,6 +48,7 @@ namespace MidiTrailRender
             auraselect.LoadSettings();
         }
 
+        ProfileManager profiles = new ProfileManager("Plugins/MidiTrailRender.json");
         public SettingsCtrl(Settings settings) : base()
         {
             InitializeComponent();
@@ -59,6 +62,7 @@ namespace MidiTrailRender
             auraselect.Width = double.NaN;
             auraselect.Height = double.NaN;
             SetValues();
+            ReloadProfiles();
         }
 
         private void Nud_ValueChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
@@ -252,8 +256,61 @@ namespace MidiTrailRender
                 if (sender == notesChangeTint) settings.notesChangeTint = (bool)notesChangeTint.IsChecked;
                 if (sender == eatNotes) settings.eatNotes = (bool)eatNotes.IsChecked;
                 if (sender == sameWidthNotes) settings.sameWidthNotes = (bool)sameWidthNotes.IsChecked;
+                if (sender == lightShade) settings.lightShade = (bool)lightShade.IsChecked;
+                if (sender == tiltKeys) settings.tiltKeys = (bool)tiltKeys.IsChecked;
             }
             catch { }
+        }
+
+        private void NewProfile_Click(object sender, RoutedEventArgs e)
+        {
+            if (profileName.Text == "")
+            {
+                MessageBox.Show("Please write a name for the profile");
+                return;
+            }
+            profiles.Add(settings, profileName.Text);
+            ReloadProfiles();
+            foreach (var i in profileSelect.Items)
+            {
+                if((string)((ComboBoxItem)i).Content == profileName.Text)
+                {
+                    profileSelect.SelectedItem = i;
+                    break;
+                }
+            }
+            SetValues();
+        }
+
+        private void ProfileSelect_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            try
+            {
+                profiles.LoadProfile((string)((ComboBoxItem)profileSelect.SelectedItem).Content, settings);
+                SetValues();
+            }
+            catch { }
+        }
+
+        private void DeleteProfile_Click(object sender, RoutedEventArgs e)
+        {
+            if (profileSelect.SelectedItem == null) return;
+            profiles.DeleteProfile((string)((ComboBoxItem)profileSelect.SelectedItem).Content);
+            ReloadProfiles();
+            SetValues();
+        }
+
+        void ReloadProfiles()
+        {
+            var ps = profiles.Profiles;
+            profileSelect.Items.Clear();
+            foreach (var p in ps)
+            {
+                profileSelect.Items.Add(new ComboBoxItem()
+                {
+                    Content = p
+                });
+            }
         }
     }
 }

@@ -7,9 +7,7 @@
              xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit" x:Class="MidiTrailRender.SettingsCtrl"
              mc:Ignorable="d" Height="407.017" Width="588.373">
     <Grid>
-        <Button x:Name="saveButton" Content="Save" HorizontalAlignment="Left" Margin="11,0,0,10" Width="74" Click="SaveButton_Click" RenderTransformOrigin="0.234,0.75" Height="20" VerticalAlignment="Bottom" />
-        <Button x:Name="loadButton" Content="Load Saved" HorizontalAlignment="Left" Margin="90,0,0,10" Width="88" Click="LoadButton_Click" Height="20" VerticalAlignment="Bottom" />
-        <Button x:Name="defaultsButton" Content="Defaults" HorizontalAlignment="Left" Margin="183,0,0,10" Width="74" Click="DefaultsButton_Click" Height="20" VerticalAlignment="Bottom"/>
+        <Button x:Name="defaultsButton" Content="Defaults" Margin="0,0,10,10" Click="DefaultsButton_Click" Height="20" VerticalAlignment="Bottom" HorizontalAlignment="Right" Width="82"/>
         <TabControl Margin="10,10,10,35">
             <TabItem Header="Visuals">
                 <Grid Background="#FFE5E5E5">
@@ -21,16 +19,18 @@
                     <xctk:DecimalUpDown x:Name="noteDownSpeed" FormatString="F2" Value="0.2" Increment="0.1"  Maximum="1" Minimum="0" Margin="114,37,0,0" HorizontalAlignment="Left" Width="65" Height="26" VerticalAlignment="Top" ValueChanged="Nud_ValueChanged"  />
                     <Label Content="Key Up Speed" HorizontalAlignment="Left" Margin="184,37,0,0" VerticalAlignment="Top"/>
                     <xctk:DecimalUpDown x:Name="noteUpSpeed" FormatString="F2" Value="0.1" Increment="0.1"  Maximum="1" Minimum="0" Margin="273,37,0,0" HorizontalAlignment="Left" Width="65" Height="26" VerticalAlignment="Top" ValueChanged="Nud_ValueChanged"  />
-                    <CheckBox x:Name="boxNotes" Content="3D Notes (SLOWER!!!)" HorizontalAlignment="Left" Margin="10,68,0,0" VerticalAlignment="Top" Checked="BoxNotes_Checked" Unchecked="BoxNotes_Checked"/>
-                    <Label Content="Note Speed" HorizontalAlignment="Left" Margin="10,88,0,0" VerticalAlignment="Top"/>
-                    <Slider x:Name="noteDeltaScreenTime" IsSnapToTickEnabled="True" TickPlacement="BottomRight" HorizontalAlignment="Left" Margin="88,94,0,0" VerticalAlignment="Top" Width="236" Maximum="13" Minimum="2" Value="1" TickFrequency="0.2" ValueChanged="NoteDeltaScreenTime_ValueChanged"/>
-                    <Label x:Name="screenTime" Content="Label" HorizontalAlignment="Left" Margin="329,88,0,0" VerticalAlignment="Top"/>
-                    <CheckBox x:Name="useVel" Content="Strength from Note Velocity" HorizontalAlignment="Left" Margin="10,119,0,0" VerticalAlignment="Top" Checked="UseVel_Checked" Unchecked="UseVel_Checked" />
-                    <CheckBox x:Name="eatNotes" Content="Keyboard Eats Notes" HorizontalAlignment="Left" Margin="10,139,0,0" VerticalAlignment="Top" Checked="CheckboxChecked" Unchecked="CheckboxChecked"/>
-                    <Label Content="On note hit:" HorizontalAlignment="Left" Margin="10,179,0,0" VerticalAlignment="Top"/>
-                    <CheckBox x:Name="notesChangeSize" Content="Change Size" HorizontalAlignment="Left" Margin="10,205,0,0" VerticalAlignment="Top" Unchecked="CheckboxChecked" Checked="CheckboxChecked"/>
-                    <CheckBox x:Name="notesChangeTint" Content="Change Tint" HorizontalAlignment="Left" Margin="10,225,0,0" VerticalAlignment="Top" Checked="CheckboxChecked" Unchecked="CheckboxChecked"/>
-                    <CheckBox x:Name="sameWidthNotes" Content="Same Width Notes" HorizontalAlignment="Left" Margin="10,159,0,0" VerticalAlignment="Top" Checked="CheckboxChecked" Unchecked="CheckboxChecked"/>
+                    <CheckBox x:Name="boxNotes" Content="3D Notes (SLOWER!!!)" HorizontalAlignment="Left" Margin="10,88,0,0" VerticalAlignment="Top" Checked="BoxNotes_Checked" Unchecked="BoxNotes_Checked"/>
+                    <Label Content="Note Speed" HorizontalAlignment="Left" Margin="10,128,0,0" VerticalAlignment="Top"/>
+                    <Slider x:Name="noteDeltaScreenTime" IsSnapToTickEnabled="True" TickPlacement="BottomRight" HorizontalAlignment="Left" Margin="88,134,0,0" VerticalAlignment="Top" Width="236" Maximum="13" Minimum="2" Value="1" TickFrequency="0.2" ValueChanged="NoteDeltaScreenTime_ValueChanged"/>
+                    <Label x:Name="screenTime" Content="Label" HorizontalAlignment="Left" Margin="329,128,0,0" VerticalAlignment="Top"/>
+                    <CheckBox x:Name="useVel" Content="Strength from Note Velocity" HorizontalAlignment="Left" Margin="10,159,0,0" VerticalAlignment="Top" Checked="UseVel_Checked" Unchecked="UseVel_Checked" />
+                    <CheckBox x:Name="eatNotes" Content="Keyboard Eats Notes" HorizontalAlignment="Left" Margin="10,179,0,0" VerticalAlignment="Top" Checked="CheckboxChecked" Unchecked="CheckboxChecked"/>
+                    <Label Content="On note hit:" HorizontalAlignment="Left" Margin="10,219,0,0" VerticalAlignment="Top"/>
+                    <CheckBox x:Name="notesChangeSize" Content="Change Size" HorizontalAlignment="Left" Margin="10,245,0,0" VerticalAlignment="Top" Unchecked="CheckboxChecked" Checked="CheckboxChecked"/>
+                    <CheckBox x:Name="notesChangeTint" Content="Change Tint" HorizontalAlignment="Left" Margin="10,265,0,0" VerticalAlignment="Top" Checked="CheckboxChecked" Unchecked="CheckboxChecked"/>
+                    <CheckBox x:Name="sameWidthNotes" Content="Same Width Notes" HorizontalAlignment="Left" Margin="10,199,0,0" VerticalAlignment="Top" Checked="CheckboxChecked" Unchecked="CheckboxChecked"/>
+                    <CheckBox IsEnabled="{Binding IsChecked, ElementName=boxNotes }" x:Name="lightShade" Content="Light Shade" HorizontalAlignment="Left" Margin="10,108,0,0" VerticalAlignment="Top" Checked="CheckboxChecked" Unchecked="CheckboxChecked"/>
+                    <CheckBox x:Name="tiltKeys" Content="Tilt Keys" HorizontalAlignment="Left" Margin="10,68,0,0" VerticalAlignment="Top"  Checked="CheckboxChecked" Unchecked="CheckboxChecked"/>
                 </Grid>
             </TabItem>
             <TabItem Header="Camera">
@@ -65,5 +65,9 @@
                 </Grid>
             </TabItem>
         </TabControl>
+        <Button x:Name="newProfile" Content="Save New" HorizontalAlignment="Left" Margin="217,0,0,10" Width="75" Height="20" VerticalAlignment="Bottom" Click="NewProfile_Click"/>
+        <TextBox x:Name="profileName" HorizontalAlignment="Left" Margin="297,0,0,10" TextWrapping="Wrap" Text="" Width="120" Height="20" VerticalAlignment="Bottom"/>
+        <ComboBox x:Name="profileSelect" HorizontalAlignment="Left" Margin="102,0,0,10" Width="110" Height="20" VerticalAlignment="Bottom" SelectionChanged="ProfileSelect_SelectionChanged"/>
+        <Button x:Name="deleteProfile" Content="Delete" HorizontalAlignment="Left" Margin="10,0,0,10" Width="87" Height="20" VerticalAlignment="Bottom" Click="DeleteProfile_Click"/>
     </Grid>
 </UserControl>

@@ -23,6 +23,9 @@ namespace MidiTrailRender
         public double noteDownSpeed = 0.6;
         public double noteUpSpeed = 0.2;
         public bool boxNotes = false;
+        public bool lightShade = false;
+
+        public bool tiltKeys = true;
 
         public bool eatNotes = false;
 
