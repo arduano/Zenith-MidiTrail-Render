@@ -29,6 +29,8 @@ namespace MidiTrailRender
 
         public bool eatNotes = false;
 
+        public string palette = "Random";
+
         public string selectedAuraImage = "ring";
         public double auraStrength = 2;
         public bool auraEnabled = true;

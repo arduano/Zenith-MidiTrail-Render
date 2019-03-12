@@ -45,6 +45,7 @@ namespace MidiTrailRender
             viewAngSlider.Value = settings.camAng / Math.PI * 180;
             renderDistSlider.Value = settings.viewdist;
             renderDistBackSlider.Value = settings.viewback;
+            paletteList.SelectImage(settings.palette);
             auraselect.LoadSettings();
         }
 
@@ -53,6 +54,7 @@ namespace MidiTrailRender
         {
             InitializeComponent();
             this.settings = settings;
+            paletteList.SetPath("Plugins\\Assets\\MidiTrail\\Palettes");
             LoadSettings(true);
             auraselect = new AuraSelect(settings);
             auraSubControlGrid.Children.Add(auraselect);
@@ -200,6 +202,7 @@ namespace MidiTrailRender
 
         private void SaveButton_Click(object sender, RoutedEventArgs e)
         {
+            settings.palette = paletteList.SelectedImage;
             try
             {
                 string s = JsonConvert.SerializeObject(settings, Formatting.Indented);
@@ -264,6 +267,7 @@ namespace MidiTrailRender
 
         private void NewProfile_Click(object sender, RoutedEventArgs e)
         {
+            settings.palette = paletteList.SelectedImage;
             if (profileName.Text == "")
             {
                 MessageBox.Show("Please write a name for the profile");

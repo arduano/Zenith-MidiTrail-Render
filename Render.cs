@@ -234,7 +234,7 @@ void main()
         int buffer3dtex;
         int buffer3dbuf;
 
-        int[] whiteKeyVert = new int[7];
+        int[] whiteKeyVert = new int[7 * 3];
         int whiteKeyCol;
         int whiteKeyIndx;
         int whiteKeyBlend;
@@ -294,7 +294,7 @@ void main()
         {
             lastAuraTexChange = 0;
             GL.DeleteTexture(auraTex);
-            GL.DeleteBuffers(7, whiteKeyVert);
+            GL.DeleteBuffers(7 * 3, whiteKeyVert);
             GL.DeleteBuffers(11, new int[] {
                 whiteKeyCol, blackKeyVert, blackKeyCol,
                 whiteKeyIndx, blackKeyIndx, whiteKeyBlend, blackKeyBlend,
@@ -354,7 +354,7 @@ void main()
             Initialized = true;
             Console.WriteLine("Initialised MidiTrailRender");
 
-            GL.GenBuffers(7, whiteKeyVert);
+            GL.GenBuffers(7 * 3, whiteKeyVert);
             whiteKeyCol = GL.GenBuffer();
             whiteKeyIndx = GL.GenBuffer();
             whiteKeyBlend = GL.GenBuffer();
@@ -636,6 +636,28 @@ void main()
                     verts,
                     BufferUsageHint.StaticDraw);
             }
+            for (int i = 0; i < 7; i++)
+            {
+                foreach (var j in leftIndxs) verts[j] = offsets[i * 2];
+                foreach (var j in rightIndxs) verts[j] = 1;
+                GL.BindBuffer(BufferTarget.ArrayBuffer, whiteKeyVert[i + 7]);
+                GL.BufferData(
+                    BufferTarget.ArrayBuffer,
+                    (IntPtr)(verts.Length * 8),
+                    verts,
+                    BufferUsageHint.StaticDraw);
+            }
+            for (int i = 0; i < 7; i++)
+            {
+                foreach (var j in leftIndxs) verts[j] = 0;
+                foreach (var j in rightIndxs) verts[j] = offsets[i * 2 + 1];
+                GL.BindBuffer(BufferTarget.ArrayBuffer, whiteKeyVert[i + 14]);
+                GL.BufferData(
+                    BufferTarget.ArrayBuffer,
+                    (IntPtr)(verts.Length * 8),
+                    verts,
+                    BufferUsageHint.StaticDraw);
+            }
             #endregion
 
             #region Black Key Model
@@ -772,6 +794,8 @@ void main()
                 indexes,
                 BufferUsageHint.StaticDraw);
             #endregion
+
+            keyPressFactor = new double[257];
         }
 
         Color4[] keyColors = new Color4[514];
@@ -1526,7 +1550,12 @@ void main()
                     Matrix4.CreatePerspectiveFieldOfView((float)fov, (float)aspect, 0.01f, 400)
                     ;
 
-                GL.BindBuffer(BufferTarget.ArrayBuffer, whiteKeyVert[keynum[n] % 7]);
+                if(n == firstNote)
+                    GL.BindBuffer(BufferTarget.ArrayBuffer, whiteKeyVert[keynum[n] % 7 + 14]);
+                else if (n == lastNote - 1)
+                    GL.BindBuffer(BufferTarget.ArrayBuffer, whiteKeyVert[keynum[n] % 7 + 7]);
+                else
+                    GL.BindBuffer(BufferTarget.ArrayBuffer, whiteKeyVert[keynum[n] % 7]);
                 GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Double, false, 24, 0);
                 GL.UniformMatrix4(uWhiteKeyMVP, false, ref mvp);
                 GL.DrawElements(PrimitiveType.Quads, whiteKeyBufferLen, DrawElementsType.UnsignedInt, IntPtr.Zero);
@@ -1619,14 +1648,23 @@ void main()
 
         public void SetTrackColors(Color4[][] trakcs)
         {
+            var cols = ((SettingsCtrl)SettingsControl).paletteList.GetColors(trakcs.Length);
+
             for (int i = 0; i < trakcs.Length; i++)
             {
-                for (int j = 0; j < trakcs[i].Length / 2; j++)
+                for (int j = 0; j < trakcs[i].Length; j++)
                 {
-                    trakcs[i][j * 2] = Color4.FromHsv(new OpenTK.Vector4((i * 16 + j) * 1.36271f % 1, 1.0f, 1, 1f));
-                    trakcs[i][j * 2 + 1] = Color4.FromHsv(new OpenTK.Vector4((i * 16 + j) * 1.36271f % 1, 1.0f, 1, 1f));
+                    trakcs[i][j] = cols[i * 32 + j];
                 }
             }
+            //for (int i = 0; i < trakcs.Length; i++)
+            //{
+            //    for (int j = 0; j < trakcs[i].Length / 2; j++)
+            //    {
+            //        trakcs[i][j * 2] = Color4.FromHsv(new OpenTK.Vector4((i * 16 + j) * 1.36271f % 1, 1.0f, 1, 1f));
+            //        trakcs[i][j * 2 + 1] = Color4.FromHsv(new OpenTK.Vector4((i * 16 + j) * 1.36271f % 1, 1.0f, 1, 1f));
+            //    }
+            //}
         }
 
         void FlushNoteBuffer(bool check = true)
