@@ -130,6 +130,7 @@ namespace MidiTrailRender
         {
             this.settings = settings;
             InitializeComponent();
+            Resources.MergedDictionaries.Clear();
             ReloadImages();
         }
 

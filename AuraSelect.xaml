@@ -6,20 +6,30 @@
              xmlns:local="clr-namespace:MidiTrailRender"
              xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit" x:Class="MidiTrailRender.AuraSelect"
              mc:Ignorable="d" Height="342.588" Width="518.468">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://siteoforigin:,,,/Languages/en/miditrail.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="200"/>
             <ColumnDefinition/>
         </Grid.ColumnDefinitions>
         <Image x:Name="imagePreview" Grid.Column="1" Margin="10" Grid.RowSpan="2"/>
-        <Button x:Name="reload" Content="Reload" Margin="10,70,10,0" VerticalAlignment="Top" Click="Reload_Click" Height="20"/>
-        <TextBlock Margin="10,10,10,0" TextWrapping="Wrap" VerticalAlignment="Top" Height="35"><Run Text="Image needs to be square"/><Run Text=" png"/><Run Text=" and only alpha is taken into account"/></TextBlock>
-        <ListBox x:Name="imagesList" Margin="10,95,10,79" SelectionChanged="ImagesList_SelectionChanged"/>
-        <TextBlock Margin="10,0,10,10" TextWrapping="Wrap" Height="33" VerticalAlignment="Bottom" Grid.Row="1"><Run Text="Images located in"/><Run Text=":"/><LineBreak/><Run Text="Plugins\Assets\Midi"/><Run Text="T"/><Run Text="rail\Aura"/></TextBlock>
-        <Label Content="Strength:" HorizontalAlignment="Left" Margin="10,0,0,48" Width="58" Height="26" VerticalAlignment="Bottom"/>
-
-        <xctk:DecimalUpDown x:Name="auraStrength" FormatString="F2" Value="1" Increment="0.1"  Maximum="3" Minimum="1" Margin="73,0,0,48" HorizontalAlignment="Left" Width="77" Height="26" VerticalAlignment="Bottom" ValueChanged="AuraStrength_ValueChanged"  />
-        <CheckBox Name="auraEnabled" Content="Note Aura Enabled" HorizontalAlignment="Left" Margin="10,50,0,0" VerticalAlignment="Top" Checked="AuraEnabled_Checked" Unchecked="AuraEnabled_Checked"/>
+        <DockPanel LastChildFill="True" Margin="10" >
+            <TextBlock DockPanel.Dock="Top" Text="{DynamicResource imageHint}" Margin="0" TextWrapping="Wrap" VerticalAlignment="Top"/>
+            <CheckBox x:Name="auraEnabled" Content="{DynamicResource auraEnabled}" HorizontalAlignment="Left" Margin="0,5,0,0" VerticalAlignment="Top" Checked="AuraEnabled_Checked" Unchecked="AuraEnabled_Checked" DockPanel.Dock="Top"/>
+            <Button x:Name="reload" Content="{DynamicResource reload}" Margin="0,5,0,0" VerticalAlignment="Top" Click="Reload_Click" DockPanel.Dock="Top"/>
+            <TextBlock DockPanel.Dock="Bottom" Margin="0" Text="{DynamicResource auraLocation}" TextWrapping="Wrap" VerticalAlignment="Bottom" Grid.Row="1"/>
+            <DockPanel DockPanel.Dock="Bottom" HorizontalAlignment="Left" LastChildFill="False" Margin="0,0,0,5" VerticalAlignment="Top">
+                <Label Content="{DynamicResource auraStrength}" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Bottom" DockPanel.Dock="Left"/>
+                <xctk:DecimalUpDown x:Name="auraStrength" FormatString="F2" Value="1" Increment="0.1"  Maximum="3" Minimum="1" Margin="5,0,0,0" HorizontalAlignment="Left" Width="77" Height="26" VerticalAlignment="Bottom" ValueChanged="AuraStrength_ValueChanged"  DockPanel.Dock="Left"  />
+            </DockPanel>
+            <ListBox x:Name="imagesList" Margin="0,5" SelectionChanged="ImagesList_SelectionChanged"/>
+        </DockPanel>
 
     </Grid>
 </UserControl>

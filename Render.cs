@@ -37,11 +37,11 @@ namespace MidiTrailRender
         #endregion
 
         public string Name => "MidiTrail+";
-        public string Description => "Clone of the popular tool MidiTrail for black midi rendering. Added exclusive bonus features, and less buggy.";
+        public string Description => "Clone of the popular tool MidiTrail for black midi rendering. Added exclusive bonus features, and less buggy. Extremely customisable.";
 
         public bool Initialized { get; set; } = false;
 
-        public ImageSource PreviewImage => null;
+        public ImageSource PreviewImage { get; private set; }
 
         #region Shaders
         string whiteKeyShaderVert = @"#version 330 core
@@ -311,7 +311,7 @@ void main()
             this.settings = new Settings();
             this.renderSettings = settings;
             settingsCtrl = new SettingsCtrl(this.settings);
-            //PreviewImage = BitmapToImageSource(Properties.Resources.preview);
+            PreviewImage = BitmapToImageSource(Properties.Resources.preview);
             for (int i = 0; i < blackKeys.Length; i++) blackKeys[i] = isBlackNote(i);
             int b = 0;
             int w = 0;
