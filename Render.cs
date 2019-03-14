@@ -233,6 +233,7 @@ void main()
 
         int buffer3dtex;
         int buffer3dbuf;
+        int buffer3dbufdepth;
 
         int[] whiteKeyVert = new int[7 * 3];
         int whiteKeyCol;
@@ -294,12 +295,32 @@ void main()
         {
             lastAuraTexChange = 0;
             GL.DeleteTexture(auraTex);
+
+            GL.DeleteFramebuffer(buffer3dbuf);
+            GL.DeleteTexture(buffer3dtex);
+            GL.DeleteRenderbuffer(buffer3dbufdepth);
+
             GL.DeleteBuffers(7 * 3, whiteKeyVert);
             GL.DeleteBuffers(11, new int[] {
                 whiteKeyCol, blackKeyVert, blackKeyCol,
                 whiteKeyIndx, blackKeyIndx, whiteKeyBlend, blackKeyBlend,
                 noteVert, noteCol, noteIndx, noteShade
             });
+            GL.DeleteProgram(whiteKeyShader);
+            GL.DeleteProgram(blackKeyShader);
+            GL.DeleteProgram(noteShader);
+            GL.DeleteProgram(circleShader);
+
+             noteVertBuff = null;
+             noteColBuff = null;
+             noteShadeBuff = null;
+             noteIndxBuff = null;
+
+             circleVertBuff = null;
+             circleColorBuff = null;
+             circleUVBuff = null;
+             circleIndxBuff = null;
+
             util.Dispose();
             Initialized = false;
             Console.WriteLine("Disposed of MidiTrailRender");
@@ -348,7 +369,7 @@ void main()
             uNoteMVP = GL.GetUniformLocation(noteShader, "MVP");
             uCircleMVP = GL.GetUniformLocation(circleShader, "MVP");
 
-            GLUtils.GenFrameBufferTexture(renderSettings.width, renderSettings.height, out buffer3dbuf, out buffer3dtex, true);
+            GLUtils.GenFrameBufferTexture3d(renderSettings.width, renderSettings.height, out buffer3dbuf, out buffer3dtex, out buffer3dbufdepth);
 
             util = new Util();
             Initialized = true;
