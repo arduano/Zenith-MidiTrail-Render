@@ -15,7 +15,6 @@
         </ResourceDictionary>
     </UserControl.Resources>
     <Grid>
-        <Button x:Name="defaultsButton" Content="{DynamicResource loadDefault}" Margin="0,0,10,10" Click="DefaultsButton_Click" Height="20" VerticalAlignment="Bottom" HorizontalAlignment="Right" Width="82"/>
         <TabControl Margin="10,10,10,35">
             <TabItem Header="{DynamicResource visualsTab}">
                 <Grid Background="#FFE5E5E5">
@@ -32,9 +31,6 @@
                         <xctk:DecimalUpDown x:Name="noteUpSpeed" FormatString="F2" Value="0.1" Increment="0.1"  Maximum="1" Minimum="0" Margin="5,0,0,0" HorizontalAlignment="Left" Width="65" Height="26" VerticalAlignment="Top" ValueChanged="Nud_ValueChanged"  />
                     </DockPanel>
                     <CheckBox x:Name="boxNotes" Content="{DynamicResource 3dNotes}" HorizontalAlignment="Left" Margin="10,93,0,0" VerticalAlignment="Top" Checked="BoxNotes_Checked" Unchecked="BoxNotes_Checked"/>
-                    <Label Content="{DynamicResource noteSpeed}" HorizontalAlignment="Left" Margin="10,133,0,0" VerticalAlignment="Top"/>
-                    <Slider x:Name="noteDeltaScreenTime" IsSnapToTickEnabled="True" TickPlacement="BottomRight" HorizontalAlignment="Left" Margin="88,139,0,0" VerticalAlignment="Top" Width="203" Maximum="13" Minimum="2" Value="1" TickFrequency="0.2" ValueChanged="NoteDeltaScreenTime_ValueChanged"/>
-                    <Label x:Name="screenTime" Content="Label" HorizontalAlignment="Left" Margin="296,133,0,0" VerticalAlignment="Top"/>
                     <CheckBox x:Name="useVel" Content="{DynamicResource velocityStrength}" HorizontalAlignment="Left" Margin="10,164,0,0" VerticalAlignment="Top" Checked="UseVel_Checked" Unchecked="UseVel_Checked" />
                     <CheckBox x:Name="eatNotes" Content="{DynamicResource keyboardClip}" HorizontalAlignment="Left" Margin="10,184,0,0" VerticalAlignment="Top" Checked="CheckboxChecked" Unchecked="CheckboxChecked"/>
                     <Label Content="{DynamicResource onNoteHit}" HorizontalAlignment="Left" Margin="10,224,0,0" VerticalAlignment="Top"/>
@@ -44,6 +40,11 @@
                     <CheckBox IsEnabled="{Binding IsChecked, ElementName=boxNotes }" x:Name="lightShade" Content="{DynamicResource lightShade}" HorizontalAlignment="Left" Margin="10,113,0,0" VerticalAlignment="Top" Checked="CheckboxChecked" Unchecked="CheckboxChecked"/>
                     <CheckBox x:Name="tiltKeys" Content="{DynamicResource tiltKeys}" HorizontalAlignment="Left" Margin="10,73,0,0" VerticalAlignment="Top"  Checked="CheckboxChecked" Unchecked="CheckboxChecked"/>
                     <bme:NoteColorPalettePick x:FieldModifier="public" x:Name="paletteList" Margin="0,10,10,10" HorizontalAlignment="Right" Width="184"/>
+                    <DockPanel HorizontalAlignment="Left" LastChildFill="False" Margin="10,133,0,0" VerticalAlignment="Top" >
+                        <Label Content="{DynamicResource noteSpeed}" HorizontalAlignment="Left" VerticalAlignment="Top" DockPanel.Dock="Left"/>
+                        <Slider x:Name="noteDeltaScreenTime" IsSnapToTickEnabled="True" TickPlacement="BottomRight" HorizontalAlignment="Left" VerticalAlignment="Top" Width="203" Maximum="13" Minimum="2" Value="1" TickFrequency="0.2" ValueChanged="NoteDeltaScreenTime_ValueChanged" DockPanel.Dock="Left" Margin="0,3,0,0"/>
+                        <Label x:Name="screenTime" Content="Label" HorizontalAlignment="Left" VerticalAlignment="Top" DockPanel.Dock="Left"/>
+                    </DockPanel>
                 </Grid>
             </TabItem>
             <TabItem Header="{DynamicResource cameraTab}">
@@ -90,9 +91,12 @@
                 </Grid>
             </TabItem>
         </TabControl>
-        <Button x:Name="newProfile" Content="{DynamicResource saveNew}" HorizontalAlignment="Left" Margin="217,0,0,10" Width="75" Height="20" VerticalAlignment="Bottom" Click="NewProfile_Click"/>
-        <TextBox x:Name="profileName" HorizontalAlignment="Left" Margin="297,0,0,10" TextWrapping="Wrap" Text="" Width="120" Height="20" VerticalAlignment="Bottom"/>
-        <ComboBox x:Name="profileSelect" HorizontalAlignment="Left" Margin="102,0,0,10" Width="110" Height="20" VerticalAlignment="Bottom" SelectionChanged="ProfileSelect_SelectionChanged"/>
-        <Button x:Name="deleteProfile" Content="{DynamicResource delete}" HorizontalAlignment="Left" Margin="10,0,0,10" Width="87" Height="20" VerticalAlignment="Bottom" Click="DeleteProfile_Click"/>
+        <DockPanel LastChildFill="False" Margin="10,377,10,10">
+            <Button x:Name="deleteProfile" Content="{DynamicResource delete}" HorizontalAlignment="Left" Margin="0" Padding="20,0,20,0" Height="20" VerticalAlignment="Bottom" Click="DeleteProfile_Click" DockPanel.Dock="Left"/>
+            <ComboBox DockPanel.Dock="Left" x:Name="profileSelect" HorizontalAlignment="Left" Margin="5,0,0,0" Width="110" Height="20" VerticalAlignment="Bottom" SelectionChanged="ProfileSelect_SelectionChanged"/>
+            <Button x:Name="newProfile" Content="{DynamicResource saveNew}" HorizontalAlignment="Left" Margin="5,0,0,0" Padding="20,0,20,0" Height="20" VerticalAlignment="Bottom" Click="NewProfile_Click" DockPanel.Dock="Left"/>
+            <TextBox DockPanel.Dock="Left" x:Name="profileName" HorizontalAlignment="Left" Margin="5,0,0,0" TextWrapping="Wrap" Text="" Width="120" Height="20" VerticalAlignment="Bottom"/>
+            <Button x:Name="defaultsButton" Content="{DynamicResource loadDefault}" Margin="0" Click="DefaultsButton_Click" Height="20" VerticalAlignment="Bottom" HorizontalAlignment="Right" Padding="20,0,20,0" DockPanel.Dock="Right"/>
+        </DockPanel>
     </Grid>
 </UserControl>
