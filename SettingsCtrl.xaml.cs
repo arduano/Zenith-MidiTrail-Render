@@ -39,10 +39,12 @@ namespace MidiTrailRender
             lightShade.IsChecked = settings.lightShade;
             tiltKeys.IsChecked = settings.tiltKeys;
             noteDeltaScreenTime.Value = Math.Log(settings.deltaTimeOnScreen, 2);
-            camHeight.Value = (decimal)settings.viewHeight;
-            camOffset.Value = (decimal)settings.viewOffset;
+            camOffsetX.Value = (decimal)settings.viewOffset;
+            camOffsetY.Value = (decimal)settings.viewHeight;
+            camOffsetZ.Value = (decimal)settings.viewPan;
             FOVSlider.Value = settings.FOV / Math.PI * 180;
             viewAngSlider.Value = settings.camAng / Math.PI * 180;
+            viewTurnSlider.Value = settings.camRot / Math.PI * 180;
             renderDistSlider.Value = settings.viewdist;
             renderDistBackSlider.Value = settings.viewback;
             paletteList.SelectImage(settings.palette);
@@ -75,8 +77,9 @@ namespace MidiTrailRender
                 if (sender == lastNote) settings.lastNote = (int)lastNote.Value + 1;
                 if (sender == noteDownSpeed) settings.noteDownSpeed = (double)noteDownSpeed.Value;
                 if (sender == noteUpSpeed) settings.noteUpSpeed = (double)noteUpSpeed.Value;
-                if (sender == camHeight) settings.viewHeight = (double)camHeight.Value;
-                if (sender == camOffset) settings.viewOffset = (double)camOffset.Value;
+                if (sender == camOffsetX) settings.viewOffset = (double)camOffsetX.Value;
+                if (sender == camOffsetY) settings.viewHeight = (double)camOffsetY.Value;
+                if (sender == camOffsetZ) settings.viewPan = (double)camOffsetZ.Value;
             }
             catch (NullReferenceException) { }
             catch (InvalidOperationException) { }
@@ -127,6 +130,16 @@ namespace MidiTrailRender
             catch { }
         }
 
+        private void ViewTurnSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            try
+            {
+                settings.camRot = (double)viewTurnSlider.Value / 180 * Math.PI;
+                viewTurnVal.Content = Math.Round(viewTurnSlider.Value).ToString();
+            }
+            catch { }
+        }
+
         private void NoteDeltaScreenTime_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
             try
@@ -162,42 +175,62 @@ namespace MidiTrailRender
 
         private void FarPreset_Click(object sender, RoutedEventArgs e)
         {
-            camHeight.Value = 0.5M;
-            camOffset.Value = 0.4M;
+            camOffsetY.Value = 0.5M;
+            camOffsetX.Value = 0.4M;
+            camOffsetZ.Value = 0;
             FOVSlider.Value = 60;
             viewAngSlider.Value = 32.08;
+            viewTurnSlider.Value = 0;
             renderDistSlider.Value = 14;
             renderDistBackSlider.Value = 0.2;
         }
 
         private void MediumPreset_Click(object sender, RoutedEventArgs e)
         {
-            camHeight.Value = 0.52M;
-            camOffset.Value = 0.37M;
+            camOffsetY.Value = 0.52M;
+            camOffsetX.Value = 0.37M;
+            camOffsetZ.Value = 0;
             FOVSlider.Value = 60;
             viewAngSlider.Value = 34.98;
+            viewTurnSlider.Value = 0;
             renderDistSlider.Value = 5.52;
             renderDistBackSlider.Value = 0.2;
         }
 
         private void ClosePreset_Click(object sender, RoutedEventArgs e)
         {
-            camHeight.Value = 0.58M;
-            camOffset.Value = 0.12M;
+            camOffsetY.Value = 0.55M;
+            camOffsetX.Value = 0.33M;
+            camOffsetZ.Value = 0;
             FOVSlider.Value = 60;
-            viewAngSlider.Value = 61.11;
-            renderDistSlider.Value = 1.25;
+            viewAngSlider.Value = 39.62;
+            viewTurnSlider.Value = 0;
+            renderDistSlider.Value = 3.06;
             renderDistBackSlider.Value = 0.2;
         }
 
-        private void CloserPreset_Click(object sender, RoutedEventArgs e)
+        private void TopPreset_Click(object sender, RoutedEventArgs e)
         {
-            camHeight.Value = 0.55M;
-            camOffset.Value = 0.33M;
+            camOffsetY.Value = 10M;
+            camOffsetX.Value = -3.77M;
+            camOffsetZ.Value = -1.53M;
+            FOVSlider.Value = 26;
+            viewAngSlider.Value = 90;
+            viewTurnSlider.Value = -90;
+            renderDistSlider.Value = 7.93;
+            renderDistBackSlider.Value = 0.64;
+        }
+
+        private void PerspectivePreset_Click(object sender, RoutedEventArgs e)
+        {
+            camOffsetY.Value = 0.67M;
+            camOffsetX.Value = 1.07M;
+            camOffsetZ.Value = -0.32M;
             FOVSlider.Value = 60;
-            viewAngSlider.Value = 39.62;
-            renderDistSlider.Value = 3.06;
-            renderDistBackSlider.Value = 0.2;
+            viewAngSlider.Value = 33.24;
+            viewTurnSlider.Value = -13.84;
+            renderDistSlider.Value = 14;
+            renderDistBackSlider.Value = 0.98;
         }
 
         private void SaveButton_Click(object sender, RoutedEventArgs e)

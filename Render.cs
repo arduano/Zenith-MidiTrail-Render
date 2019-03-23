@@ -311,15 +311,15 @@ void main()
             GL.DeleteProgram(noteShader);
             GL.DeleteProgram(circleShader);
 
-             noteVertBuff = null;
-             noteColBuff = null;
-             noteShadeBuff = null;
-             noteIndxBuff = null;
+            noteVertBuff = null;
+            noteColBuff = null;
+            noteShadeBuff = null;
+            noteIndxBuff = null;
 
-             circleVertBuff = null;
-             circleColorBuff = null;
-             circleUVBuff = null;
-             circleIndxBuff = null;
+            circleVertBuff = null;
+            circleColorBuff = null;
+            circleUVBuff = null;
+            circleIndxBuff = null;
 
             util.Dispose();
             Initialized = false;
@@ -819,6 +819,37 @@ void main()
             keyPressFactor = new double[257];
         }
 
+        #region Vars
+        int firstNote;
+        int lastNote;
+        bool sameWidth;
+        double deltaTimeOnScreen;
+        double noteDownSpeed;
+        double noteUpSpeed;
+        bool blockNotes;
+        bool useVel;
+        bool changeSize;
+        bool changeTint;
+        double tempoFrameStep;
+        bool eatNotes;
+        float auraStrength;
+        bool auraEnabled;
+        bool lightShade;
+        bool tiltKeys;
+
+        double fov;
+        double aspect;
+        double viewdist;
+        double viewback;
+        double viewheight;
+        double viewpan;
+        double viewoffset;
+        double camAng;
+        double camRot;
+
+        double circleRadius;
+        #endregion
+
         Color4[] keyColors = new Color4[514];
         double[] x1array = new double[257];
         double[] wdtharray = new double[257];
@@ -846,46 +877,44 @@ void main()
             GL.Clear(ClearBufferMask.DepthBufferBit);
 
             long nc = 0;
-            int firstNote = settings.firstNote;
-            int lastNote = settings.lastNote;
-            bool sameWidth = settings.sameWidthNotes;
-            double deltaTimeOnScreen = NoteScreenTime;
-            double noteDownSpeed = settings.noteDownSpeed;
-            double noteUpSpeed = settings.noteUpSpeed;
-            bool blockNotes = settings.boxNotes;
-            bool useVel = settings.useVel;
-            bool changeSize = settings.notesChangeSize;
-            bool changeTint = settings.notesChangeTint;
-            double tempoFrameStep = 1 / LastMidiTimePerTick * (1000000.0 / renderSettings.fps);
-            bool eatNotes = settings.eatNotes;
-            float auraStrength = (float)settings.auraStrength;
-            bool auraEnabled = settings.auraEnabled;
-            bool lightShade = settings.lightShade;
-            bool tiltKeys = settings.tiltKeys;
+            firstNote = settings.firstNote;
+            lastNote = settings.lastNote;
+            sameWidth = settings.sameWidthNotes;
+            deltaTimeOnScreen = NoteScreenTime;
+            noteDownSpeed = settings.noteDownSpeed;
+            noteUpSpeed = settings.noteUpSpeed;
+            blockNotes = settings.boxNotes;
+            useVel = settings.useVel;
+            changeSize = settings.notesChangeSize;
+            changeTint = settings.notesChangeTint;
+            tempoFrameStep = 1 / LastMidiTimePerTick * (1000000.0 / renderSettings.fps);
+            eatNotes = settings.eatNotes;
+            auraStrength = (float)settings.auraStrength;
+            auraEnabled = settings.auraEnabled;
+            lightShade = settings.lightShade;
+            tiltKeys = settings.tiltKeys;
 
-            double fov = settings.FOV;
-            double aspect = (double)renderSettings.width / renderSettings.height;
-            double viewdist = settings.viewdist;
-            double viewback = settings.viewback;
-            double viewheight = settings.viewHeight;
-            double viewoffset = -settings.viewOffset;
-            double camAng = settings.camAng;
+            fov = settings.FOV;
+            aspect = (double)renderSettings.width / renderSettings.height;
+            viewdist = settings.viewdist;
+            viewback = settings.viewback;
+            viewheight = settings.viewHeight;
+            viewpan = settings.viewPan;
+            viewoffset = -settings.viewOffset;
+            camAng = settings.camAng;
+            camRot = settings.camRot;
             fov /= 1;
             for (int i = 0; i < 514; i++) keyColors[i] = Color4.Transparent;
             for (int i = 0; i < 256; i++) auraSize[i] = 0;
             for (int i = 0; i < keyPressFactor.Length; i++) keyPressFactor[i] = Math.Max(keyPressFactor[i] / 1.05 - noteUpSpeed, 0);
             float wdth;
             double wdthd;
-            float wdth2;
             float r, g, b, a, r2, g2, b2, a2;
-            float x1;
-            float x2;
             double x1d;
             double x2d;
             double y1;
             double y2;
             Matrix4 mvp;
-            double circleRadius;
             if (settings.sameWidthNotes)
             {
                 for (int i = 0; i < 257; i++)
@@ -943,8 +972,9 @@ void main()
             GL.UseProgram(noteShader);
 
             mvp = Matrix4.Identity *
-                Matrix4.CreateTranslation(0, -(float)viewheight, -(float)viewoffset) *
+                Matrix4.CreateTranslation((float)viewpan, -(float)viewheight, -(float)viewoffset) *
                 Matrix4.CreateScale(1, 1, -1) *
+                Matrix4.CreateRotationY((float)camRot) *
                 Matrix4.CreateRotationX((float)camAng) *
                 Matrix4.CreatePerspectiveFieldOfView((float)fov, (float)aspect, 0.01f, 400)
                 ;
@@ -979,7 +1009,7 @@ void main()
                             y1 /= deltaTimeOnScreen / viewdist;
                             y2 /= deltaTimeOnScreen / viewdist;
 
-                            if (x1d < 0) x1d += wdthd;
+                            if (x1d > viewpan) x1d += wdthd;
                             if (n.start < midiTime && (n.end > midiTime || !n.hasEnded))
                             {
                                 double factor = 0.5;
@@ -1312,160 +1342,216 @@ void main()
             LastNoteCount = nc;
             #endregion
 
-            GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.One);
-
-            if (auraEnabled)
+            if (viewoffset < 0)
             {
-                #region Aura
-
-                GL.UseProgram(circleShader);
-
-                GL.BindTexture(TextureTarget.Texture2D, auraTex);
-
-                mvp = Matrix4.Identity *
-                    Matrix4.CreateTranslation(0, -(float)viewheight, -(float)viewoffset) *
-                    Matrix4.CreateScale(1, 1, -1) *
-                    Matrix4.CreateRotationX((float)camAng) *
-                    Matrix4.CreatePerspectiveFieldOfView((float)fov, (float)aspect, 0.01f, 400)
-                    ;
-                GL.UniformMatrix4(uCircleMVP, false, ref mvp);
-
-                circleBuffPos = 0;
-                for (int n = firstNote; n < lastNote; n++)
+                if (auraEnabled)
                 {
-                    x1d = x1array[n] - 0.5;
-                    wdthd = wdtharray[n];
-                    x2d = x1d + wdthd;
-                    double size = circleRadius * 12 * auraSize[n];
-                    if (!blackKeys[n])
-                    {
-                        y2 = 0;
-                        if (settings.sameWidthNotes)
-                        {
-                            int _n = n % 12;
-                            if (_n == 0)
-                                x2d += wdthd * 0.666f;
-                            else if (_n == 2)
-                            {
-                                x1d -= wdthd / 3;
-                                x2d += wdthd / 3;
-                            }
-                            else if (_n == 4)
-                                x1d -= wdthd / 3 * 2;
-                            else if (_n == 5)
-                                x2d += wdthd * 0.75f;
-                            else if (_n == 7)
-                            {
-                                x1d -= wdthd / 4;
-                                x2d += wdthd / 2;
-                            }
-                            else if (_n == 9)
-                            {
-                                x1d -= wdthd / 2;
-                                x2d += wdthd / 4;
-                            }
-                            else if (_n == 11)
-                                x1d -= wdthd * 0.75f;
-                        }
-                    }
-
-                    Color4 coll = keyColors[n * 2];
-                    Color4 colr = keyColors[n * 2 + 1];
-
-                    r = coll.R * auraStrength;
-                    g = coll.G * auraStrength;
-                    b = coll.B * auraStrength;
-                    a = coll.A * auraStrength;
-                    r2 = colr.R * auraStrength;
-                    g2 = colr.G * auraStrength;
-                    b2 = colr.B * auraStrength;
-                    a2 = colr.A * auraStrength;
-
-                    double middle = (x1d + x2d) / 2;
-                    x1d = middle - size;
-                    x2d = middle + size;
-                    y1 = size;
-                    y2 = -size;
-
-
-                    int pos = circleBuffPos * 12;
-                    circleVertBuff[pos++] = x1d;
-                    circleVertBuff[pos++] = y1;
-                    circleVertBuff[pos++] = 0;
-                    circleVertBuff[pos++] = x1d;
-                    circleVertBuff[pos++] = y2;
-                    circleVertBuff[pos++] = 0;
-                    circleVertBuff[pos++] = x2d;
-                    circleVertBuff[pos++] = y2;
-                    circleVertBuff[pos++] = 0;
-                    circleVertBuff[pos++] = x2d;
-                    circleVertBuff[pos++] = y1;
-                    circleVertBuff[pos++] = 0;
-
-                    pos = circleBuffPos * 16;
-                    circleColorBuff[pos++] = r;
-                    circleColorBuff[pos++] = g;
-                    circleColorBuff[pos++] = b;
-                    circleColorBuff[pos++] = a;
-                    circleColorBuff[pos++] = r;
-                    circleColorBuff[pos++] = g;
-                    circleColorBuff[pos++] = b;
-                    circleColorBuff[pos++] = a;
-                    circleColorBuff[pos++] = r2;
-                    circleColorBuff[pos++] = g2;
-                    circleColorBuff[pos++] = b2;
-                    circleColorBuff[pos++] = a2;
-                    circleColorBuff[pos++] = r2;
-                    circleColorBuff[pos++] = g2;
-                    circleColorBuff[pos++] = b2;
-                    circleColorBuff[pos++] = a2;
-
-                    pos = circleBuffPos * 8;
-                    circleUVBuff[pos++] = 0;
-                    circleUVBuff[pos++] = 0;
-                    circleUVBuff[pos++] = 1;
-                    circleUVBuff[pos++] = 0;
-                    circleUVBuff[pos++] = 1;
-                    circleUVBuff[pos++] = 1;
-                    circleUVBuff[pos++] = 0;
-                    circleUVBuff[pos++] = 1;
-
-                    circleBuffPos++;
+                    GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.One);
+                    RenderAura();
+                    GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
                 }
-                GL.BindBuffer(BufferTarget.ArrayBuffer, circleVert);
-                GL.BufferData(
-                    BufferTarget.ArrayBuffer,
-                    (IntPtr)(circleVertBuff.Length * 8),
-                    circleVertBuff,
-                    BufferUsageHint.StaticDraw);
-                GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Double, false, 24, 0);
-                GL.BindBuffer(BufferTarget.ArrayBuffer, circleColor);
-                GL.BufferData(
-                    BufferTarget.ArrayBuffer,
-                    (IntPtr)(circleColorBuff.Length * 4),
-                    circleColorBuff,
-                    BufferUsageHint.StaticDraw);
-                GL.VertexAttribPointer(1, 4, VertexAttribPointerType.Float, false, 16, 0);
-                GL.BindBuffer(BufferTarget.ArrayBuffer, circleUV);
-                GL.BufferData(
-                    BufferTarget.ArrayBuffer,
-                    (IntPtr)(circleUVBuff.Length * 8),
-                    circleUVBuff,
-                    BufferUsageHint.StaticDraw);
-                GL.VertexAttribPointer(2, 2, VertexAttribPointerType.Double, false, 16, 0);
-                GL.BindBuffer(BufferTarget.ElementArrayBuffer, circleIndx);
-                GL.IndexPointer(IndexPointerType.Int, 1, 0);
-                GL.DrawElements(PrimitiveType.Quads, circleBuffPos * 4, DrawElementsType.UnsignedInt, IntPtr.Zero);
+                GL.DepthFunc(DepthFunction.Less);
 
-                GL.BindTexture(TextureTarget.Texture2D, 0);
-                #endregion
+                RenderKeyboard();
+            }
+            else
+            {
+                GL.DepthFunc(DepthFunction.Less);
+                RenderKeyboard();
+                GL.DepthFunc(DepthFunction.Always);
+
+                if (auraEnabled)
+                {
+                    GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.One);
+                    RenderAura();
+                    GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+                }
+                GL.DepthFunc(DepthFunction.Less);
             }
 
-            GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
 
-            GL.DepthFunc(DepthFunction.Less);
 
+            GL.Disable(EnableCap.Blend);
+            GL.DisableClientState(ArrayCap.VertexArray);
+            GL.DisableClientState(ArrayCap.ColorArray);
+            GL.Disable(EnableCap.Texture2D);
+            GL.Disable(EnableCap.DepthTest);
+
+            GL.DisableVertexAttribArray(0);
+            GL.DisableVertexAttribArray(1);
+            GL.DisableVertexAttribArray(2);
+
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, finalCompositeBuff);
+            GL.BindTexture(TextureTarget.Texture2D, buffer3dtex);
+            GL.Clear(ClearBufferMask.ColorBufferBit);
+            GL.Clear(ClearBufferMask.DepthBufferBit);
+            util.DrawScreenQuad();
+        }
+
+        void RenderAura()
+        {
+            #region Aura
+            double wdthd;
+            float r, g, b, a, r2, g2, b2, a2;
+            double x1d;
+            double x2d;
+            double y1;
+            double y2;
+            Matrix4 mvp;
+
+            GL.UseProgram(circleShader);
+
+            GL.BindTexture(TextureTarget.Texture2D, auraTex);
+
+            mvp = Matrix4.Identity *
+                Matrix4.CreateTranslation((float)viewpan, -(float)viewheight, -(float)viewoffset) *
+                Matrix4.CreateScale(1, 1, -1) *
+            Matrix4.CreateRotationY((float)camRot) *
+                Matrix4.CreateRotationX((float)camAng) *
+                Matrix4.CreatePerspectiveFieldOfView((float)fov, (float)aspect, 0.01f, 400)
+                ;
+            GL.UniformMatrix4(uCircleMVP, false, ref mvp);
+
+            circleBuffPos = 0;
+            for (int n = firstNote; n < lastNote; n++)
+            {
+                x1d = x1array[n] - 0.5;
+                wdthd = wdtharray[n];
+                x2d = x1d + wdthd;
+                double size = circleRadius * 12 * auraSize[n];
+                if (!blackKeys[n])
+                {
+                    y2 = 0;
+                    if (settings.sameWidthNotes)
+                    {
+                        int _n = n % 12;
+                        if (_n == 0)
+                            x2d += wdthd * 0.666f;
+                        else if (_n == 2)
+                        {
+                            x1d -= wdthd / 3;
+                            x2d += wdthd / 3;
+                        }
+                        else if (_n == 4)
+                            x1d -= wdthd / 3 * 2;
+                        else if (_n == 5)
+                            x2d += wdthd * 0.75f;
+                        else if (_n == 7)
+                        {
+                            x1d -= wdthd / 4;
+                            x2d += wdthd / 2;
+                        }
+                        else if (_n == 9)
+                        {
+                            x1d -= wdthd / 2;
+                            x2d += wdthd / 4;
+                        }
+                        else if (_n == 11)
+                            x1d -= wdthd * 0.75f;
+                    }
+                }
+
+                Color4 coll = keyColors[n * 2];
+                Color4 colr = keyColors[n * 2 + 1];
+
+                r = coll.R * auraStrength;
+                g = coll.G * auraStrength;
+                b = coll.B * auraStrength;
+                a = coll.A * auraStrength;
+                r2 = colr.R * auraStrength;
+                g2 = colr.G * auraStrength;
+                b2 = colr.B * auraStrength;
+                a2 = colr.A * auraStrength;
+
+                double middle = (x1d + x2d) / 2;
+                x1d = middle - size;
+                x2d = middle + size;
+                y1 = size;
+                y2 = -size;
+
+
+                int pos = circleBuffPos * 12;
+                circleVertBuff[pos++] = x1d;
+                circleVertBuff[pos++] = y1;
+                circleVertBuff[pos++] = 0;
+                circleVertBuff[pos++] = x1d;
+                circleVertBuff[pos++] = y2;
+                circleVertBuff[pos++] = 0;
+                circleVertBuff[pos++] = x2d;
+                circleVertBuff[pos++] = y2;
+                circleVertBuff[pos++] = 0;
+                circleVertBuff[pos++] = x2d;
+                circleVertBuff[pos++] = y1;
+                circleVertBuff[pos++] = 0;
+
+                pos = circleBuffPos * 16;
+                circleColorBuff[pos++] = r;
+                circleColorBuff[pos++] = g;
+                circleColorBuff[pos++] = b;
+                circleColorBuff[pos++] = a;
+                circleColorBuff[pos++] = r;
+                circleColorBuff[pos++] = g;
+                circleColorBuff[pos++] = b;
+                circleColorBuff[pos++] = a;
+                circleColorBuff[pos++] = r2;
+                circleColorBuff[pos++] = g2;
+                circleColorBuff[pos++] = b2;
+                circleColorBuff[pos++] = a2;
+                circleColorBuff[pos++] = r2;
+                circleColorBuff[pos++] = g2;
+                circleColorBuff[pos++] = b2;
+                circleColorBuff[pos++] = a2;
+
+                pos = circleBuffPos * 8;
+                circleUVBuff[pos++] = 0;
+                circleUVBuff[pos++] = 0;
+                circleUVBuff[pos++] = 1;
+                circleUVBuff[pos++] = 0;
+                circleUVBuff[pos++] = 1;
+                circleUVBuff[pos++] = 1;
+                circleUVBuff[pos++] = 0;
+                circleUVBuff[pos++] = 1;
+
+                circleBuffPos++;
+            }
+            GL.BindBuffer(BufferTarget.ArrayBuffer, circleVert);
+            GL.BufferData(
+                BufferTarget.ArrayBuffer,
+                (IntPtr)(circleVertBuff.Length * 8),
+                circleVertBuff,
+                BufferUsageHint.StaticDraw);
+            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Double, false, 24, 0);
+            GL.BindBuffer(BufferTarget.ArrayBuffer, circleColor);
+            GL.BufferData(
+                BufferTarget.ArrayBuffer,
+                (IntPtr)(circleColorBuff.Length * 4),
+                circleColorBuff,
+                BufferUsageHint.StaticDraw);
+            GL.VertexAttribPointer(1, 4, VertexAttribPointerType.Float, false, 16, 0);
+            GL.BindBuffer(BufferTarget.ArrayBuffer, circleUV);
+            GL.BufferData(
+                BufferTarget.ArrayBuffer,
+                (IntPtr)(circleUVBuff.Length * 8),
+                circleUVBuff,
+                BufferUsageHint.StaticDraw);
+            GL.VertexAttribPointer(2, 2, VertexAttribPointerType.Double, false, 16, 0);
+            GL.BindBuffer(BufferTarget.ElementArrayBuffer, circleIndx);
+            GL.IndexPointer(IndexPointerType.Int, 1, 0);
+            GL.DrawElements(PrimitiveType.Quads, circleBuffPos * 4, DrawElementsType.UnsignedInt, IntPtr.Zero);
+
+            GL.BindTexture(TextureTarget.Texture2D, 0);
+            #endregion
+        }
+
+        void RenderKeyboard()
+        {
             #region Keyboard
+            float wdth;
+            float wdth2;
+            float x1;
+            float x2;
+            double y2;
+            Matrix4 mvp;
             Color4[] origColors = new Color4[257];
             for (int k = firstNote; k < lastNote; k++)
             {
@@ -1565,13 +1651,14 @@ void main()
                     Matrix4.CreateTranslation(0, -0.3f, 0) *
                     Matrix4.CreateScale(wdth, wdth, wdth2) *
                     Matrix4.CreateTranslation(x1, 0, 0) *
-                    Matrix4.CreateTranslation(0, -(float)viewheight, -(float)viewoffset) *
+                    Matrix4.CreateTranslation((float)viewpan, -(float)viewheight, -(float)viewoffset) *
                     Matrix4.CreateScale(1, 1, -1) *
+                Matrix4.CreateRotationY((float)camRot) *
                     Matrix4.CreateRotationX((float)camAng) *
                     Matrix4.CreatePerspectiveFieldOfView((float)fov, (float)aspect, 0.01f, 400)
                     ;
 
-                if(n == firstNote)
+                if (n == firstNote)
                     GL.BindBuffer(BufferTarget.ArrayBuffer, whiteKeyVert[keynum[n] % 7 + 14]);
                 else if (n == lastNote - 1)
                     GL.BindBuffer(BufferTarget.ArrayBuffer, whiteKeyVert[keynum[n] % 7 + 7]);
@@ -1639,8 +1726,9 @@ void main()
                 Matrix4.CreateTranslation(0, vertOffset, 0) *
                 Matrix4.CreateScale(wdth, wdth / scale, wdth) *
                 Matrix4.CreateTranslation(x1, 0, 0) *
-                Matrix4.CreateTranslation(0, -(float)viewheight, -(float)viewoffset) *
+                Matrix4.CreateTranslation((float)viewpan, -(float)viewheight, -(float)viewoffset) *
                 Matrix4.CreateScale(1, 1, -1) *
+                Matrix4.CreateRotationY((float)camRot) *
                 Matrix4.CreateRotationX((float)camAng) *
                 Matrix4.CreatePerspectiveFieldOfView((float)fov, (float)aspect, 0.01f, 400)
                 ;
@@ -1649,22 +1737,6 @@ void main()
                 GL.DrawElements(PrimitiveType.Quads, blackKeyBufferLen, DrawElementsType.UnsignedInt, IntPtr.Zero);
             }
             #endregion
-
-            GL.Disable(EnableCap.Blend);
-            GL.DisableClientState(ArrayCap.VertexArray);
-            GL.DisableClientState(ArrayCap.ColorArray);
-            GL.Disable(EnableCap.Texture2D);
-            GL.Disable(EnableCap.DepthTest);
-
-            GL.DisableVertexAttribArray(0);
-            GL.DisableVertexAttribArray(1);
-            GL.DisableVertexAttribArray(2);
-
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, finalCompositeBuff);
-            GL.BindTexture(TextureTarget.Texture2D, buffer3dtex);
-            GL.Clear(ClearBufferMask.ColorBufferBit);
-            GL.Clear(ClearBufferMask.DepthBufferBit);
-            util.DrawScreenQuad();
         }
 
         public void SetTrackColors(Color4[][] trakcs)

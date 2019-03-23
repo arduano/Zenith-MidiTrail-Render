@@ -16,9 +16,11 @@ namespace MidiTrailRender
         public double FOV = 3.1415 / 3;
         public double viewHeight = 0.5;
         public double viewOffset = 0.4;
+        public double viewPan = 0.0;
+        public double camAng = 0.56;
+        public double camRot = 0;
         public double viewdist = 14;
         public double viewback = 0.2;
-        public double camAng = 0.56;
 
         public double noteDownSpeed = 0.6;
         public double noteUpSpeed = 0.2;

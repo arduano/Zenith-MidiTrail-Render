@@ -54,35 +54,43 @@
                         <Label Content="{DynamicResource cameraPreset}" HorizontalAlignment="Left" VerticalAlignment="Top" DockPanel.Dock="Left"/>
                         <Button x:Name="farPreset" Content="{DynamicResource farPreset}" HorizontalAlignment="Left" Width="75" Click="FarPreset_Click" DockPanel.Dock="Left" Margin="5,3,0,3"/>
                         <Button x:Name="mediumPreset" Content="{DynamicResource mediumPreset}" HorizontalAlignment="Left" VerticalAlignment="Top" Width="75" Click="MediumPreset_Click" DockPanel.Dock="Left" Margin="5,3,0,3"/>
-                        <Button x:Name="closerPreset" Content="{DynamicResource closerPreset}" HorizontalAlignment="Left" VerticalAlignment="Top" Width="75" Click="CloserPreset_Click" DockPanel.Dock="Left" Margin="5,3,0,3"/>
                         <Button x:Name="closePreset" Content="{DynamicResource closePreset}" HorizontalAlignment="Left" VerticalAlignment="Top" Width="75" Click="ClosePreset_Click" DockPanel.Dock="Left" Margin="5,3,0,3"/>
+                        <Button x:Name="topPreset" Content="{DynamicResource topPreset}" HorizontalAlignment="Left" VerticalAlignment="Top" Width="75" Click="TopPreset_Click" DockPanel.Dock="Left" Margin="5,3,0,3"/>
+                        <Button x:Name="perspectivePreset" Content="{DynamicResource perspectivePreset}" HorizontalAlignment="Left" VerticalAlignment="Top" Width="75" Click="PerspectivePreset_Click" DockPanel.Dock="Left" Margin="5,3,0,3"/>
                     </DockPanel>
                     <DockPanel HorizontalAlignment="Left" LastChildFill="False" Margin="10,85,0,0" VerticalAlignment="Top">
                         <Label Content="{DynamicResource FOV}" HorizontalAlignment="Left" VerticalAlignment="Top" DockPanel.Dock="Left"/>
                         <Slider x:Name="FOVSlider" IsSnapToTickEnabled="True" HorizontalAlignment="Left" VerticalAlignment="Top" Width="166" Maximum="150" Minimum="20" TickPlacement="BottomRight" TickFrequency="2" SmallChange="2" Value="60" Height="18" ValueChanged="FOVSlider_ValueChanged" DockPanel.Dock="Left" Margin="0,5,0,0"/>
                         <Label x:Name="FOVVal" Content="" HorizontalAlignment="Left" VerticalAlignment="Top" DockPanel.Dock="Left"/>
                     </DockPanel>
-                    <DockPanel HorizontalAlignment="Left" LastChildFill="False" Margin="10,113,0,0" VerticalAlignment="Top" >
-                        <Label Content="{DynamicResource viewAngle}" HorizontalAlignment="Left" VerticalAlignment="Top" DockPanel.Dock="Left"/>
-                        <Slider x:Name="viewAngSlider" HorizontalAlignment="Left" VerticalAlignment="Top" Width="166" Maximum="90" Minimum="0" SmallChange="0.1" Value="60" Height="18" ValueChanged="ViewAngSlider_ValueChanged" DockPanel.Dock="Left" Margin="0,5,0,0"/>
+                    <DockPanel HorizontalAlignment="Left" LastChildFill="False" Margin="10,210,0,0" VerticalAlignment="Top" >
+                        <Label Content="{DynamicResource viewTilt}" HorizontalAlignment="Left" VerticalAlignment="Top" DockPanel.Dock="Left"/>
+                        <Slider x:Name="viewAngSlider" HorizontalAlignment="Left" VerticalAlignment="Top" Width="166" Maximum="90" Minimum="0" SmallChange="0.1" Value="0" Height="18" ValueChanged="ViewAngSlider_ValueChanged" DockPanel.Dock="Left" Margin="0,5,0,0"/>
                         <Label x:Name="viewAngVal" Content="" HorizontalAlignment="Left" VerticalAlignment="Top" DockPanel.Dock="Left"/>
                     </DockPanel>
-                    <DockPanel HorizontalAlignment="Left" LastChildFill="False" Margin="10,144,0,0" VerticalAlignment="Top" >
+                    <DockPanel HorizontalAlignment="Left" LastChildFill="False" Margin="10,236,0,0" VerticalAlignment="Top" >
+                        <Label Content="{DynamicResource viewTurn}" HorizontalAlignment="Left" VerticalAlignment="Top" DockPanel.Dock="Left"/>
+                        <Slider x:Name="viewTurnSlider" HorizontalAlignment="Left" VerticalAlignment="Top" Width="271" Maximum="180" Minimum="-180" SmallChange="0.1" Value="0" Height="18" ValueChanged="ViewTurnSlider_ValueChanged" DockPanel.Dock="Left" Margin="0,5,0,0"/>
+                        <Label x:Name="viewTurnVal" Content="" HorizontalAlignment="Left" VerticalAlignment="Top" DockPanel.Dock="Left"/>
+                    </DockPanel>
+                    <DockPanel HorizontalAlignment="Left" LastChildFill="False" Margin="10,117,0,0" VerticalAlignment="Top" >
                         <Label Content="{DynamicResource renderDistF}" HorizontalAlignment="Left" VerticalAlignment="Top" DockPanel.Dock="Left"/>
                         <Slider x:Name="renderDistSlider" HorizontalAlignment="Left" VerticalAlignment="Top" Width="290" Maximum="20" Minimum="0" SmallChange="0.1" Value="60" Height="18" ValueChanged="RenderDistSlider_ValueChanged" DockPanel.Dock="Left" Margin="0,5,0,0"/>
                         <Label x:Name="renderDistVal" Content="" HorizontalAlignment="Left" VerticalAlignment="Top" RenderTransformOrigin="0.233,2.013" DockPanel.Dock="Left"/>
                     </DockPanel>
-                    <DockPanel HorizontalAlignment="Left" LastChildFill="False" Margin="10,175,0,0" VerticalAlignment="Top" >
+                    <DockPanel HorizontalAlignment="Left" LastChildFill="False" Margin="10,148,0,0" VerticalAlignment="Top" >
                         <Label Content="{DynamicResource renderDistB}" HorizontalAlignment="Left" VerticalAlignment="Top" DockPanel.Dock="Left"/>
                         <Slider x:Name="renderDistBackSlider" HorizontalAlignment="Left" VerticalAlignment="Top" Width="290" Maximum="20" Minimum="0" SmallChange="0.1" Value="60" Height="18" ValueChanged="RenderDistBackSlider_ValueChanged" DockPanel.Dock="Left" Margin="0,5,0,0"/>
                         <Label x:Name="renderDistBackVal" Content="" HorizontalAlignment="Left" VerticalAlignment="Top" DockPanel.Dock="Left"/>
                     </DockPanel>
-                    <DockPanel HorizontalAlignment="Left" LastChildFill="False" Margin="10,206,0,0" VerticalAlignment="Top" >
+                    <DockPanel HorizontalAlignment="Left" LastChildFill="False" Margin="10,179,0,0" VerticalAlignment="Top" >
                         <Label Content="{DynamicResource camOffsets}" HorizontalAlignment="Left" VerticalAlignment="Top" DockPanel.Dock="Left"/>
-                        <Label Content="{DynamicResource horizontal}" HorizontalAlignment="Left" VerticalAlignment="Top" DockPanel.Dock="Left" Margin="10,0,0,0"/>
-                        <xctk:DecimalUpDown x:Name="camOffset" FormatString="F2" Value="0.0" Increment="0.01"  Maximum="15" Minimum="-20" HorizontalAlignment="Left" Width="65" Height="26" VerticalAlignment="Top" ValueChanged="Nud_ValueChanged"  DockPanel.Dock="Left" Margin="5,0,0,0"  />
-                        <Label Content="{DynamicResource vertical}" HorizontalAlignment="Left" VerticalAlignment="Top" DockPanel.Dock="Left" Margin="10,0,0,0"/>
-                        <xctk:DecimalUpDown x:Name="camHeight" FormatString="F2" Value="0.0" Increment="0.01"  Maximum="10" Minimum="0" HorizontalAlignment="Left" Width="64" Height="26" VerticalAlignment="Top" ValueChanged="Nud_ValueChanged"  DockPanel.Dock="Left" Margin="5,0,0,0"  />
+                        <Label Content="{DynamicResource offsetX}" HorizontalAlignment="Left" VerticalAlignment="Top" DockPanel.Dock="Left" Margin="10,0,0,0"/>
+                        <xctk:DecimalUpDown x:Name="camOffsetX" FormatString="F2" Value="0.0" Increment="0.01"  Maximum="15" Minimum="-20" HorizontalAlignment="Left" Width="65" Height="26" VerticalAlignment="Top" ValueChanged="Nud_ValueChanged"  DockPanel.Dock="Left" Margin="5,0,0,0"  />
+                        <Label Content="{DynamicResource offsetY}" HorizontalAlignment="Left" VerticalAlignment="Top" DockPanel.Dock="Left" Margin="10,0,0,0"/>
+                        <xctk:DecimalUpDown x:Name="camOffsetY" FormatString="F2" Value="0.0" Increment="0.01"  Maximum="10" Minimum="0" HorizontalAlignment="Left" Width="64" Height="26" VerticalAlignment="Top" ValueChanged="Nud_ValueChanged"  DockPanel.Dock="Left" Margin="5,0,0,0"  />
+                        <Label Content="{DynamicResource offsetZ}" HorizontalAlignment="Left" VerticalAlignment="Top" DockPanel.Dock="Left" Margin="10,0,0,0"/>
+                        <xctk:DecimalUpDown x:Name="camOffsetZ" FormatString="F2" Value="0.0" Increment="0.01"  Maximum="20" Minimum="-20" HorizontalAlignment="Left" Width="64" Height="26" VerticalAlignment="Top" ValueChanged="Nud_ValueChanged"  DockPanel.Dock="Left" Margin="5,0,0,0"  />
                     </DockPanel>
                 </Grid>
             </TabItem>
