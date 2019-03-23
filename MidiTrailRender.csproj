@@ -7,8 +7,8 @@
     <ProjectGuid>{991E132A-A56D-49AB-BBEE-9828359BB307}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>MidiTrailRender</RootNamespace>
-    <AssemblyName>MidiTrailRender</AssemblyName>
+    <RootNamespace>MIDITrailRender</RootNamespace>
+    <AssemblyName>MIDITrailRender</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>

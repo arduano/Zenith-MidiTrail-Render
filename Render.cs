@@ -14,7 +14,7 @@ using OpenTK;
 using OpenTK.Graphics;
 using OpenTK.Graphics.OpenGL;
 
-namespace MidiTrailRender
+namespace MIDITrailRender
 {
     public class Render : IPluginRender
     {
@@ -36,8 +36,8 @@ namespace MidiTrailRender
         }
         #endregion
 
-        public string Name => "MidiTrail+";
-        public string Description => "Clone of the popular tool MidiTrail for black midi rendering. Added exclusive bonus features, and less buggy. Extremely customisable.";
+        public string Name => "MIDITrail+";
+        public string Description => "Clone of the popular tool MIDITrail for black midi rendering. Added exclusive bonus features, and less buggy. Extremely customisable.";
 
         public bool Initialized { get; set; } = false;
 
@@ -323,7 +323,7 @@ void main()
 
             util.Dispose();
             Initialized = false;
-            Console.WriteLine("Disposed of MidiTrailRender");
+            Console.WriteLine("Disposed of MIDITrailRender");
         }
 
         Util util;
@@ -373,7 +373,7 @@ void main()
 
             util = new Util();
             Initialized = true;
-            Console.WriteLine("Initialised MidiTrailRender");
+            Console.WriteLine("Initialised MIDITrailRender");
 
             GL.GenBuffers(7 * 3, whiteKeyVert);
             whiteKeyCol = GL.GenBuffer();

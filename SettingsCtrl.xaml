@@ -3,9 +3,9 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:local="clr-namespace:MidiTrailRender"
+             xmlns:local="clr-namespace:MIDITrailRender"
              xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
-    xmlns:bme="clr-namespace:BMEngine;assembly=ZenithEngine" x:Class="MidiTrailRender.SettingsCtrl"
+    xmlns:bme="clr-namespace:BMEngine;assembly=ZenithEngine" x:Class="MIDITrailRender.SettingsCtrl"
              mc:Ignorable="d" Height="407.017" Width="588.373">
     <UserControl.Resources>
         <ResourceDictionary>

@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using OpenTK.Graphics.OpenGL;
 
-namespace MidiTrailRender
+namespace MIDITrailRender
 {
     class Util : IDisposable
     {

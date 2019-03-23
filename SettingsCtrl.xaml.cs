@@ -15,7 +15,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 
-namespace MidiTrailRender
+namespace MIDITrailRender
 {
     /// <summary>
     /// Interaction logic for SettingsCtrl.xaml
@@ -45,18 +45,19 @@ namespace MidiTrailRender
             FOVSlider.Value = settings.FOV / Math.PI * 180;
             viewAngSlider.Value = settings.camAng / Math.PI * 180;
             viewTurnSlider.Value = settings.camRot / Math.PI * 180;
+            viewTurnSlider.Value = settings.camRot / Math.PI * 180;
             renderDistSlider.Value = settings.viewdist;
             renderDistBackSlider.Value = settings.viewback;
             paletteList.SelectImage(settings.palette);
             auraselect.LoadSettings();
         }
 
-        ProfileManager profiles = new ProfileManager("Plugins/MidiTrailRender.json");
+        ProfileManager profiles = new ProfileManager("Plugins/MIDITrailRender.json");
         public SettingsCtrl(Settings settings) : base()
         {
             InitializeComponent();
             this.settings = settings;
-            paletteList.SetPath("Plugins\\Assets\\MidiTrail\\Palettes");
+            paletteList.SetPath("Plugins\\Assets\\MIDITrail\\Palettes");
             LoadSettings(true);
             auraselect = new AuraSelect(settings);
             auraSubControlGrid.Children.Add(auraselect);
@@ -239,8 +240,8 @@ namespace MidiTrailRender
             try
             {
                 string s = JsonConvert.SerializeObject(settings, Formatting.Indented);
-                File.WriteAllText("Plugins/MidiTrailRender.json", s);
-                Console.WriteLine("Saved settings to MidiTrailRender.json");
+                File.WriteAllText("Plugins/MIDITrailRender.json", s);
+                Console.WriteLine("Saved settings to MIDITrailRender.json");
             }
             catch
             {
@@ -253,10 +254,10 @@ namespace MidiTrailRender
 
             try
             {
-                string s = File.ReadAllText("Plugins/MidiTrailRender.json");
+                string s = File.ReadAllText("Plugins/MIDITrailRender.json");
                 var sett = JsonConvert.DeserializeObject<Settings>(s);
                 injectSettings(sett);
-                Console.WriteLine("Loaded settings from MidiTrailRender.json");
+                Console.WriteLine("Loaded settings from MIDITrailRender.json");
             }
             catch
             {

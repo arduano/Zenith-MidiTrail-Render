@@ -18,7 +18,7 @@ using Image = System.Drawing.Image;
 using Path = System.IO.Path;
 using Color = System.Drawing.Color;
 
-namespace MidiTrailRender
+namespace MIDITrailRender
 {
     /// <summary>
     /// Interaction logic for AuraSelect.xaml
@@ -82,13 +82,13 @@ namespace MidiTrailRender
             foreach (var i in images) i.Dispose();
             images.Clear();
             imagesList.Items.Clear();
-            if (!Directory.Exists("Plugins\\Assets\\MidiTrail\\Aura")) Directory.CreateDirectory("Plugins\\Assets\\MidiTrail\\Aura");
+            if (!Directory.Exists("Plugins\\Assets\\MIDITrail\\Aura")) Directory.CreateDirectory("Plugins\\Assets\\MIDITrail\\Aura");
             try
             {
-                Properties.Resources.aura_ring.Save("Plugins\\Assets\\MidiTrail\\Aura\\ring.png");
+                Properties.Resources.aura_ring.Save("Plugins\\Assets\\MIDITrail\\Aura\\ring.png");
             }
             catch { }
-            var imagePaths = Directory.GetFiles("Plugins\\Assets\\MidiTrail\\Aura").Where((p) => p.EndsWith(".png"));
+            var imagePaths = Directory.GetFiles("Plugins\\Assets\\MIDITrail\\Aura").Where((p) => p.EndsWith(".png"));
             foreach (var i in imagePaths)
             {
                 try

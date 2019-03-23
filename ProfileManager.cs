@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using Newtonsoft.Json;
 
-namespace MidiTrailRender
+namespace MIDITrailRender
 {
     class ProfileManager
     {
