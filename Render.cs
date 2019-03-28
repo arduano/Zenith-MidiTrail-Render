@@ -209,6 +209,8 @@ void main()
 
         public double LastMidiTimePerTick { get; set; } = 500000 / 96.0;
 
+        public MidiFile CurrentMidi { get; set; }
+
         public double NoteScreenTime => settings.viewdist * settings.deltaTimeOnScreen;
 
         public long LastNoteCount { get; private set; }
