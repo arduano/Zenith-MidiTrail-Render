@@ -209,7 +209,7 @@ void main()
 
         public double LastMidiTimePerTick { get; set; } = 500000 / 96.0;
 
-        public MidiFile CurrentMidi { get; set; }
+        public MidiInfo CurrentMidi { get; set; }
 
         public double NoteScreenTime => settings.viewdist * settings.deltaTimeOnScreen;
 
@@ -997,8 +997,8 @@ void main()
                             nc++;
                             int k = n.note;
                             if (!(k >= firstNote && k < lastNote)) continue;
-                            Color4 coll = n.track.trkColor[n.channel * 2];
-                            Color4 colr = n.track.trkColor[n.channel * 2 + 1];
+                            Color4 coll = n.color.left;
+                            Color4 colr = n.color.right;
                             float shade = 0;
                             x1d = x1array[k] - 0.5;
                             wdthd = wdtharray[k];
@@ -1109,8 +1109,8 @@ void main()
                             nc++;
                             int k = n.note;
                             if (!(k >= firstNote && k < lastNote)) continue;
-                            Color4 coll = n.track.trkColor[n.channel * 2];
-                            Color4 colr = n.track.trkColor[n.channel * 2 + 1];
+                            Color4 coll = n.color.left;
+                            Color4 colr = n.color.right;
                             float shade = 0;
                             x1d = x1array[k] - 0.5;
                             wdthd = wdtharray[k];
@@ -1217,8 +1217,8 @@ void main()
                             nc++;
                             int k = n.note;
                             if (!(k >= firstNote && k < lastNote)) continue;
-                            Color4 coll = n.track.trkColor[n.channel * 2];
-                            Color4 colr = n.track.trkColor[n.channel * 2 + 1];
+                            Color4 coll = n.color.left;
+                            Color4 colr = n.color.right;
                             float shade = 0;
 
                             x1d = x1array[k] - 0.5;
@@ -1741,7 +1741,7 @@ void main()
             #endregion
         }
 
-        public void SetTrackColors(Color4[][] trakcs)
+        public void SetTrackColors(NoteColor[][] trakcs)
         {
             var cols = ((SettingsCtrl)SettingsControl).paletteList.GetColors(trakcs.Length);
 
@@ -1749,17 +1749,10 @@ void main()
             {
                 for (int j = 0; j < trakcs[i].Length; j++)
                 {
-                    trakcs[i][j] = cols[i * 32 + j];
+                    trakcs[i][j].left = cols[i * 32 + j * 2];
+                    trakcs[i][j].right = cols[i * 32 + j * 2 + 1];
                 }
             }
-            //for (int i = 0; i < trakcs.Length; i++)
-            //{
-            //    for (int j = 0; j < trakcs[i].Length / 2; j++)
-            //    {
-            //        trakcs[i][j * 2] = Color4.FromHsv(new OpenTK.Vector4((i * 16 + j) * 1.36271f % 1, 1.0f, 1, 1f));
-            //        trakcs[i][j * 2 + 1] = Color4.FromHsv(new OpenTK.Vector4((i * 16 + j) * 1.36271f % 1, 1.0f, 1, 1f));
-            //    }
-            //}
         }
 
         void FlushNoteBuffer(bool check = true)
@@ -1769,21 +1762,21 @@ void main()
             GL.BindBuffer(BufferTarget.ArrayBuffer, noteVert);
             GL.BufferData(
                 BufferTarget.ArrayBuffer,
-                (IntPtr)(noteVertBuff.Length * 8),
+                (IntPtr)(noteBuffPos * 12 * 8),
                 noteVertBuff,
                 BufferUsageHint.StaticDraw);
             GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Double, false, 24, 0);
             GL.BindBuffer(BufferTarget.ArrayBuffer, noteCol);
             GL.BufferData(
                 BufferTarget.ArrayBuffer,
-                (IntPtr)(noteColBuff.Length * 4),
+                (IntPtr)(noteBuffPos * 16 * 4),
                 noteColBuff,
                 BufferUsageHint.StaticDraw);
             GL.VertexAttribPointer(1, 4, VertexAttribPointerType.Float, false, 16, 0);
             GL.BindBuffer(BufferTarget.ArrayBuffer, noteShade);
             GL.BufferData(
                 BufferTarget.ArrayBuffer,
-                (IntPtr)(noteShadeBuff.Length * 4),
+                (IntPtr)(noteBuffPos * 8 * 4),
                 noteShadeBuff,
                 BufferUsageHint.StaticDraw);
             GL.VertexAttribPointer(2, 1, VertexAttribPointerType.Float, false, 4, 0);
