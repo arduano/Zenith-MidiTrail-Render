@@ -1776,7 +1776,7 @@ void main()
             GL.BindBuffer(BufferTarget.ArrayBuffer, noteShade);
             GL.BufferData(
                 BufferTarget.ArrayBuffer,
-                (IntPtr)(noteBuffPos * 8 * 4),
+                (IntPtr)(noteBuffPos * 4 * 4),
                 noteShadeBuff,
                 BufferUsageHint.StaticDraw);
             GL.VertexAttribPointer(2, 1, VertexAttribPointerType.Float, false, 4, 0);
