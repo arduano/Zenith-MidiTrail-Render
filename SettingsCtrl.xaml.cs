@@ -57,7 +57,7 @@ namespace MIDITrailRender
         {
             InitializeComponent();
             this.settings = settings;
-            paletteList.SetPath("Plugins\\Assets\\MIDITrail\\Palettes");
+            paletteList.SetPath("Plugins\\Assets\\Palettes");
             LoadSettings(true);
             auraselect = new AuraSelect(settings);
             auraSubControlGrid.Children.Add(auraselect);
