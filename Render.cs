@@ -207,11 +207,13 @@ void main()
 
         public bool ManualNoteDelete => false;
 
-        public double LastMidiTimePerTick { get; set; } = 500000 / 96.0;
+        public double Tempo { get; set; }
 
         public MidiInfo CurrentMidi { get; set; }
 
         public double NoteScreenTime => settings.viewdist * settings.deltaTimeOnScreen;
+
+        public NoteColor[][] NoteColors { get; set; }
 
         public long LastNoteCount { get; private set; }
 
@@ -334,6 +336,7 @@ void main()
             this.settings = new Settings();
             this.renderSettings = settings;
             settingsCtrl = new SettingsCtrl(this.settings);
+            ((SettingsCtrl)SettingsControl).PaletteChanged += () => { ReloadTrackColors(); };
             PreviewImage = BitmapToImageSource(Properties.Resources.preview);
             for (int i = 0; i < blackKeys.Length; i++) blackKeys[i] = isBlackNote(i);
             int b = 0;
@@ -889,7 +892,7 @@ void main()
             useVel = settings.useVel;
             changeSize = settings.notesChangeSize;
             changeTint = settings.notesChangeTint;
-            tempoFrameStep = 1 / LastMidiTimePerTick * (1000000.0 / renderSettings.fps);
+            tempoFrameStep = 1 / (60000000 / Tempo / CurrentMidi.division) * (1000000.0 / renderSettings.fps);
             eatNotes = settings.eatNotes;
             auraStrength = (float)settings.auraStrength;
             auraEnabled = settings.auraEnabled;
@@ -1639,7 +1642,12 @@ void main()
                 GL.Uniform4(uWhiteKeycoll, coll);
                 GL.Uniform4(uWhiteKeycolr, colr);
                 float scale = 1;
-                if (!sameWidth) scale = 1.17f;
+                if (!sameWidth)
+                {
+                    scale = 1.17f;
+                    wdth2 = wdth;
+                }
+                else wdth2 = (float)wdtharray[firstNote] * 2;
                 mvp = Matrix4.Identity *
                     Matrix4.CreateScale(0.95f, 1, scale);
                 if (tiltKeys)
@@ -1651,7 +1659,7 @@ void main()
                     mvp *= Matrix4.CreateTranslation(0, (float)-keyPressFactor[n] / 2, 0);
                 mvp *=
                     Matrix4.CreateTranslation(0, -0.3f, 0) *
-                    Matrix4.CreateScale(wdth, wdth, wdth2) *
+                    (sameWidth ? Matrix4.CreateScale(wdth, wdth2 * 0.9f, wdth2 * 1.01f) : Matrix4.CreateScale(wdth2, wdth2, wdth2)) *
                     Matrix4.CreateTranslation(x1, 0, 0) *
                     Matrix4.CreateTranslation((float)viewpan, -(float)viewheight, -(float)viewoffset) *
                     Matrix4.CreateScale(1, 1, -1) *
@@ -1741,16 +1749,19 @@ void main()
             #endregion
         }
 
-        public void SetTrackColors(NoteColor[][] trakcs)
+        public void ReloadTrackColors()
         {
-            var cols = ((SettingsCtrl)SettingsControl).paletteList.GetColors(trakcs.Length);
+            var cols = ((SettingsCtrl)SettingsControl).paletteList.GetColors(NoteColors.Length);
 
-            for (int i = 0; i < trakcs.Length; i++)
+            for (int i = 0; i < NoteColors.Length; i++)
             {
-                for (int j = 0; j < trakcs[i].Length; j++)
+                for (int j = 0; j < NoteColors[i].Length; j++)
                 {
-                    trakcs[i][j].left = cols[i * 32 + j * 2];
-                    trakcs[i][j].right = cols[i * 32 + j * 2 + 1];
+                    if (NoteColors[i][j].isDefault)
+                    {
+                        NoteColors[i][j].left = cols[i * 32 + j * 2];
+                        NoteColors[i][j].right = cols[i * 32 + j * 2 + 1];
+                    }
                 }
             }
         }
