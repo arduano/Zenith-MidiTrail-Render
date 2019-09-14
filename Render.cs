@@ -220,12 +220,12 @@ void main()
         SettingsCtrl settingsCtrl;
         public Control SettingsControl => settingsCtrl;
 
-        public int NoteCollectorOffset
+        public double NoteCollectorOffset
         {
             get
             {
                 if (settings.eatNotes) return 0;
-                return -(int)(settings.deltaTimeOnScreen * settings.viewback);
+                return -settings.deltaTimeOnScreen * settings.viewback;
             }
         }
 
@@ -1014,7 +1014,7 @@ void main()
                             y1 /= deltaTimeOnScreen / viewdist;
                             y2 /= deltaTimeOnScreen / viewdist;
 
-                            if (x1d < viewpan) x1d += wdthd;
+                            if (x1d < -viewpan) x1d += wdthd;
                             if (n.start < midiTime && (n.end > midiTime || !n.hasEnded))
                             {
                                 double factor = 0.5;
@@ -1550,207 +1550,211 @@ void main()
 
         void RenderKeyboard()
         {
-            #region Keyboard
-            float wdth;
-            float wdth2;
-            float x1;
-            float x2;
-            double y2;
-            Matrix4 mvp;
-            Color4[] origColors = new Color4[257];
-            for (int k = firstNote; k < lastNote; k++)
+            if (settings.showKeyboard)
             {
-                if (isBlackNote(k))
-                    origColors[k] = Color4.Black;
-                else
-                    origColors[k] = Color4.White;
-            }
-
-            GL.UseProgram(whiteKeyShader);
-
-            GL.BindBuffer(BufferTarget.ArrayBuffer, whiteKeyCol);
-            GL.VertexAttribPointer(1, 1, VertexAttribPointerType.Float, false, 4, 0);
-            GL.BindBuffer(BufferTarget.ArrayBuffer, whiteKeyBlend);
-            GL.VertexAttribPointer(2, 1, VertexAttribPointerType.Float, false, 4, 0);
-            GL.BindBuffer(BufferTarget.ElementArrayBuffer, whiteKeyIndx);
-            GL.IndexPointer(IndexPointerType.Int, 1, 0);
-
-            for (int n = firstNote; n < lastNote; n++)
-            {
-                x1 = (float)x1array[n];
-                wdth = (float)wdtharray[n];
-                x2 = x1 + wdth;
-
-                if (!blackKeys[n])
+                #region Keyboard
+                float wdth;
+                float wdth2;
+                float x1;
+                float x2;
+                double y2;
+                Matrix4 mvp;
+                Color4[] origColors = new Color4[257];
+                for (int k = firstNote; k < lastNote; k++)
                 {
-                    y2 = 0;
-                    if (settings.sameWidthNotes)
-                    {
-                        int _n = n % 12;
-                        if (_n == 0)
-                            x2 += wdth * 0.666f;
-                        else if (_n == 2)
-                        {
-                            x1 -= wdth / 3;
-                            x2 += wdth / 3;
-                        }
-                        else if (_n == 4)
-                            x1 -= wdth / 3 * 2;
-                        else if (_n == 5)
-                            x2 += wdth * 0.75f;
-                        else if (_n == 7)
-                        {
-                            x1 -= wdth / 4;
-                            x2 += wdth / 2;
-                        }
-                        else if (_n == 9)
-                        {
-                            x1 -= wdth / 2;
-                            x2 += wdth / 4;
-                        }
-                        else if (_n == 11)
-                            x1 -= wdth * 0.75f;
-                        wdth2 = wdth * 2;
-                    }
+                    if (isBlackNote(k))
+                        origColors[k] = Color4.Black;
                     else
+                        origColors[k] = Color4.White;
+                }
+
+                GL.UseProgram(whiteKeyShader);
+
+                GL.BindBuffer(BufferTarget.ArrayBuffer, whiteKeyCol);
+                GL.VertexAttribPointer(1, 1, VertexAttribPointerType.Float, false, 4, 0);
+                GL.BindBuffer(BufferTarget.ArrayBuffer, whiteKeyBlend);
+                GL.VertexAttribPointer(2, 1, VertexAttribPointerType.Float, false, 4, 0);
+                GL.BindBuffer(BufferTarget.ElementArrayBuffer, whiteKeyIndx);
+                GL.IndexPointer(IndexPointerType.Int, 1, 0);
+
+                for (int n = firstNote; n < lastNote; n++)
+                {
+                    x1 = (float)x1array[n];
+                    wdth = (float)wdtharray[n];
+                    x2 = x1 + wdth;
+
+                    if (!blackKeys[n])
                     {
+                        y2 = 0;
+                        if (settings.sameWidthNotes)
+                        {
+                            int _n = n % 12;
+                            if (_n == 0)
+                                x2 += wdth * 0.666f;
+                            else if (_n == 2)
+                            {
+                                x1 -= wdth / 3;
+                                x2 += wdth / 3;
+                            }
+                            else if (_n == 4)
+                                x1 -= wdth / 3 * 2;
+                            else if (_n == 5)
+                                x2 += wdth * 0.75f;
+                            else if (_n == 7)
+                            {
+                                x1 -= wdth / 4;
+                                x2 += wdth / 2;
+                            }
+                            else if (_n == 9)
+                            {
+                                x1 -= wdth / 2;
+                                x2 += wdth / 4;
+                            }
+                            else if (_n == 11)
+                                x1 -= wdth * 0.75f;
+                            wdth2 = wdth * 2;
+                        }
+                        else
+                        {
+                            wdth2 = wdth;
+                        }
+                    }
+                    else continue;
+                    wdth = x2 - x1;
+                    x1 -= 0.5f;
+
+                    var coll = keyColors[n * 2];
+                    var colr = keyColors[n * 2 + 1];
+                    var origcol = origColors[n];
+                    float blendfac = coll.A * 0.8f;
+                    float revblendfac = 1 - blendfac;
+                    coll = new Color4(
+                        coll.R * blendfac + origcol.R * revblendfac,
+                        coll.G * blendfac + origcol.G * revblendfac,
+                        coll.B * blendfac + origcol.B * revblendfac,
+                        1);
+                    blendfac = colr.A * 0.8f;
+                    revblendfac = 1 - blendfac;
+                    colr = new Color4(
+                        colr.R * blendfac + origcol.R * revblendfac,
+                        colr.G * blendfac + origcol.G * revblendfac,
+                        colr.B * blendfac + origcol.B * revblendfac,
+                        1);
+
+                    GL.Uniform4(uWhiteKeycoll, coll);
+                    GL.Uniform4(uWhiteKeycolr, colr);
+                    float scale = 1;
+                    if (!sameWidth)
+                    {
+                        scale = 1.17f;
                         wdth2 = wdth;
                     }
-                }
-                else continue;
-                wdth = x2 - x1;
-                x1 -= 0.5f;
-
-                var coll = keyColors[n * 2];
-                var colr = keyColors[n * 2 + 1];
-                var origcol = origColors[n];
-                float blendfac = coll.A * 0.8f;
-                float revblendfac = 1 - blendfac;
-                coll = new Color4(
-                    coll.R * blendfac + origcol.R * revblendfac,
-                    coll.G * blendfac + origcol.G * revblendfac,
-                    coll.B * blendfac + origcol.B * revblendfac,
-                    1);
-                blendfac = colr.A * 0.8f;
-                revblendfac = 1 - blendfac;
-                colr = new Color4(
-                    colr.R * blendfac + origcol.R * revblendfac,
-                    colr.G * blendfac + origcol.G * revblendfac,
-                    colr.B * blendfac + origcol.B * revblendfac,
-                    1);
-
-                GL.Uniform4(uWhiteKeycoll, coll);
-                GL.Uniform4(uWhiteKeycolr, colr);
-                float scale = 1;
-                if (!sameWidth)
-                {
-                    scale = 1.17f;
-                    wdth2 = wdth;
-                }
-                else wdth2 = (float)wdtharray[firstNote] * 2;
-                mvp = Matrix4.Identity *
-                    Matrix4.CreateScale(0.95f, 1, scale);
-                if (tiltKeys)
+                    else wdth2 = (float)wdtharray[firstNote] * 2;
+                    mvp = Matrix4.Identity *
+                        Matrix4.CreateScale(0.95f, 1, scale);
+                    if (tiltKeys)
+                        mvp *=
+                            Matrix4.CreateTranslation(0, 0, -4) *
+                            Matrix4.CreateRotationX((float)-keyPressFactor[n] / 20) *
+                            Matrix4.CreateTranslation(0, 0, 4);
+                    else
+                        mvp *= Matrix4.CreateTranslation(0, (float)-keyPressFactor[n] / 2, 0);
                     mvp *=
-                        Matrix4.CreateTranslation(0, 0, -4) *
-                        Matrix4.CreateRotationX((float)-keyPressFactor[n] / 20) *
-                        Matrix4.CreateTranslation(0, 0, 4);
-                else
-                    mvp *= Matrix4.CreateTranslation(0, (float)-keyPressFactor[n] / 2, 0);
-                mvp *=
-                    Matrix4.CreateTranslation(0, -0.3f, 0) *
-                    (sameWidth ? Matrix4.CreateScale(wdth, wdth2 * 0.9f, wdth2 * 1.01f) : Matrix4.CreateScale(wdth2, wdth2, wdth2)) *
+                        Matrix4.CreateTranslation(0, -0.3f, 0) *
+                        (sameWidth ? Matrix4.CreateScale(wdth, wdth2 * 0.9f, wdth2 * 1.01f) : Matrix4.CreateScale(wdth2, wdth2, wdth2)) *
+                        Matrix4.CreateTranslation(x1, 0, 0) *
+                        Matrix4.CreateTranslation((float)viewpan, -(float)viewheight, -(float)viewoffset) *
+                        Matrix4.CreateScale(1, 1, -1) *
+                    Matrix4.CreateRotationY((float)camRot) *
+                        Matrix4.CreateRotationX((float)camAng) *
+                        Matrix4.CreatePerspectiveFieldOfView((float)fov, (float)aspect, 0.01f, 400)
+                    ;
+
+                    if (n == firstNote)
+                        GL.BindBuffer(BufferTarget.ArrayBuffer, whiteKeyVert[keynum[n] % 7 + 14]);
+                    else if (n == lastNote - 1)
+                        GL.BindBuffer(BufferTarget.ArrayBuffer, whiteKeyVert[keynum[n] % 7 + 7]);
+                    else
+                        GL.BindBuffer(BufferTarget.ArrayBuffer, whiteKeyVert[keynum[n] % 7]);
+                    GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Double, false, 24, 0);
+                    GL.UniformMatrix4(uWhiteKeyMVP, false, ref mvp);
+                    GL.DrawElements(PrimitiveType.Quads, whiteKeyBufferLen, DrawElementsType.UnsignedInt, IntPtr.Zero);
+                }
+
+                GL.UseProgram(blackKeyShader);
+
+                GL.BindBuffer(BufferTarget.ArrayBuffer, blackKeyVert);
+                GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Double, false, 24, 0);
+                GL.BindBuffer(BufferTarget.ArrayBuffer, blackKeyCol);
+                GL.VertexAttribPointer(1, 1, VertexAttribPointerType.Float, false, 4, 0);
+                GL.BindBuffer(BufferTarget.ArrayBuffer, blackKeyBlend);
+                GL.VertexAttribPointer(2, 1, VertexAttribPointerType.Float, false, 4, 0);
+                GL.BindBuffer(BufferTarget.ElementArrayBuffer, blackKeyIndx);
+                GL.IndexPointer(IndexPointerType.Int, 1, 0);
+
+                for (int n = firstNote; n < lastNote; n++)
+                {
+                    x1 = (float)x1array[n];
+                    wdth = (float)wdtharray[n];
+                    x1 -= 0.5f;
+
+                    if (!blackKeys[n]) continue;
+
+                    var coll = keyColors[n * 2];
+                    var colr = keyColors[n * 2 + 1];
+                    var origcol = origColors[n];
+                    float blendfac = coll.A * 0.8f;
+                    float revblendfac = 1 - blendfac;
+                    coll = new Color4(
+                        coll.R * blendfac + origcol.R * revblendfac,
+                        coll.G * blendfac + origcol.G * revblendfac,
+                        coll.B * blendfac + origcol.B * revblendfac,
+                        1);
+                    blendfac = colr.A * 0.8f;
+                    revblendfac = 1 - blendfac;
+                    colr = new Color4(
+                        colr.R * blendfac + origcol.R * revblendfac,
+                        colr.G * blendfac + origcol.G * revblendfac,
+                        colr.B * blendfac + origcol.B * revblendfac,
+                        1);
+
+                    GL.Uniform4(uBlackKeycoll, coll);
+                    GL.Uniform4(uBlackKeycolr, colr);
+
+                    float vertOffset = 1.2f;
+                    if (!sameWidth) vertOffset = 1.1f;
+                    float scale = 1;
+                    if (!sameWidth) scale = 0.97f;
+                    mvp = Matrix4.Identity *
+                        Matrix4.CreateScale(0.95f, 1, scale);
+                    if (tiltKeys)
+                        mvp *=
+                            Matrix4.CreateTranslation(0, 0, -4) *
+                            Matrix4.CreateRotationX((float)-keyPressFactor[n] / 20) *
+                            Matrix4.CreateTranslation(0, 0, 4);
+                    else
+                        mvp *= Matrix4.CreateTranslation(0, (float)-keyPressFactor[n] / 1.2f, 0);
+                    mvp *=
+                    Matrix4.CreateTranslation(0, vertOffset, 0) *
+                    Matrix4.CreateScale(wdth, wdth / scale, wdth) *
                     Matrix4.CreateTranslation(x1, 0, 0) *
                     Matrix4.CreateTranslation((float)viewpan, -(float)viewheight, -(float)viewoffset) *
                     Matrix4.CreateScale(1, 1, -1) *
-                Matrix4.CreateRotationY((float)camRot) *
+                    Matrix4.CreateRotationY((float)camRot) *
                     Matrix4.CreateRotationX((float)camAng) *
                     Matrix4.CreatePerspectiveFieldOfView((float)fov, (float)aspect, 0.01f, 400)
                     ;
 
-                if (n == firstNote)
-                    GL.BindBuffer(BufferTarget.ArrayBuffer, whiteKeyVert[keynum[n] % 7 + 14]);
-                else if (n == lastNote - 1)
-                    GL.BindBuffer(BufferTarget.ArrayBuffer, whiteKeyVert[keynum[n] % 7 + 7]);
-                else
-                    GL.BindBuffer(BufferTarget.ArrayBuffer, whiteKeyVert[keynum[n] % 7]);
-                GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Double, false, 24, 0);
-                GL.UniformMatrix4(uWhiteKeyMVP, false, ref mvp);
-                GL.DrawElements(PrimitiveType.Quads, whiteKeyBufferLen, DrawElementsType.UnsignedInt, IntPtr.Zero);
+                    GL.UniformMatrix4(uWhiteKeyMVP, false, ref mvp);
+                    GL.DrawElements(PrimitiveType.Quads, blackKeyBufferLen, DrawElementsType.UnsignedInt, IntPtr.Zero);
+                }
+                #endregion
             }
-
-            GL.UseProgram(blackKeyShader);
-
-            GL.BindBuffer(BufferTarget.ArrayBuffer, blackKeyVert);
-            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Double, false, 24, 0);
-            GL.BindBuffer(BufferTarget.ArrayBuffer, blackKeyCol);
-            GL.VertexAttribPointer(1, 1, VertexAttribPointerType.Float, false, 4, 0);
-            GL.BindBuffer(BufferTarget.ArrayBuffer, blackKeyBlend);
-            GL.VertexAttribPointer(2, 1, VertexAttribPointerType.Float, false, 4, 0);
-            GL.BindBuffer(BufferTarget.ElementArrayBuffer, blackKeyIndx);
-            GL.IndexPointer(IndexPointerType.Int, 1, 0);
-
-            for (int n = firstNote; n < lastNote; n++)
-            {
-                x1 = (float)x1array[n];
-                wdth = (float)wdtharray[n];
-                x1 -= 0.5f;
-
-                if (!blackKeys[n]) continue;
-
-                var coll = keyColors[n * 2];
-                var colr = keyColors[n * 2 + 1];
-                var origcol = origColors[n];
-                float blendfac = coll.A * 0.8f;
-                float revblendfac = 1 - blendfac;
-                coll = new Color4(
-                    coll.R * blendfac + origcol.R * revblendfac,
-                    coll.G * blendfac + origcol.G * revblendfac,
-                    coll.B * blendfac + origcol.B * revblendfac,
-                    1);
-                blendfac = colr.A * 0.8f;
-                revblendfac = 1 - blendfac;
-                colr = new Color4(
-                    colr.R * blendfac + origcol.R * revblendfac,
-                    colr.G * blendfac + origcol.G * revblendfac,
-                    colr.B * blendfac + origcol.B * revblendfac,
-                    1);
-
-                GL.Uniform4(uBlackKeycoll, coll);
-                GL.Uniform4(uBlackKeycolr, colr);
-
-                float vertOffset = 1.2f;
-                if (!sameWidth) vertOffset = 1.1f;
-                float scale = 1;
-                if (!sameWidth) scale = 0.97f;
-                mvp = Matrix4.Identity *
-                    Matrix4.CreateScale(0.95f, 1, scale);
-                if (tiltKeys)
-                    mvp *=
-                        Matrix4.CreateTranslation(0, 0, -4) *
-                        Matrix4.CreateRotationX((float)-keyPressFactor[n] / 20) *
-                        Matrix4.CreateTranslation(0, 0, 4);
-                else
-                    mvp *= Matrix4.CreateTranslation(0, (float)-keyPressFactor[n] / 1.2f, 0);
-                mvp *=
-                Matrix4.CreateTranslation(0, vertOffset, 0) *
-                Matrix4.CreateScale(wdth, wdth / scale, wdth) *
-                Matrix4.CreateTranslation(x1, 0, 0) *
-                Matrix4.CreateTranslation((float)viewpan, -(float)viewheight, -(float)viewoffset) *
-                Matrix4.CreateScale(1, 1, -1) *
-                Matrix4.CreateRotationY((float)camRot) *
-                Matrix4.CreateRotationX((float)camAng) *
-                Matrix4.CreatePerspectiveFieldOfView((float)fov, (float)aspect, 0.01f, 400)
-                ;
-
-                GL.UniformMatrix4(uWhiteKeyMVP, false, ref mvp);
-                GL.DrawElements(PrimitiveType.Quads, blackKeyBufferLen, DrawElementsType.UnsignedInt, IntPtr.Zero);
-            }
-            #endregion
         }
 
         public void ReloadTrackColors()
         {
+            if (NoteColors == null) return;
             var cols = ((SettingsCtrl)SettingsControl).paletteList.GetColors(NoteColors.Length);
 
             for (int i = 0; i < NoteColors.Length; i++)

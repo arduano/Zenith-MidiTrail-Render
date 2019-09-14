@@ -44,6 +44,7 @@ namespace MIDITrailRender
             sameWidthNotes.IsChecked = settings.sameWidthNotes;
             lightShade.IsChecked = settings.lightShade;
             tiltKeys.IsChecked = settings.tiltKeys;
+            showKeyboard.IsChecked = settings.showKeyboard;
             noteDeltaScreenTime.Value = Math.Log(settings.deltaTimeOnScreen, 2);
             camOffsetX.Value = (decimal)settings.viewOffset;
             camOffsetY.Value = (decimal)settings.viewHeight;
@@ -301,6 +302,7 @@ namespace MIDITrailRender
                 if (sender == sameWidthNotes) settings.sameWidthNotes = (bool)sameWidthNotes.IsChecked;
                 if (sender == lightShade) settings.lightShade = (bool)lightShade.IsChecked;
                 if (sender == tiltKeys) settings.tiltKeys = (bool)tiltKeys.IsChecked;
+                if (sender == showKeyboard) settings.showKeyboard = (bool)showKeyboard.IsChecked;
             }
             catch { }
         }

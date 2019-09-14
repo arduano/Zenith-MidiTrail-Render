@@ -26,6 +26,7 @@ namespace MIDITrailRender
         public double noteUpSpeed = 0.2;
         public bool boxNotes = false;
         public bool lightShade = false;
+        public bool showKeyboard = true;
 
         public bool tiltKeys = true;
 

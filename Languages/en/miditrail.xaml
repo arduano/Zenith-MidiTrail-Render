@@ -6,7 +6,6 @@
 
     <!--Palette picker-->
     <system:String x:Key="palettes_reload">Reload</system:String>
-    <system:String x:Key="palettes_restartNote">Note: Restart preview to update the color palette</system:String>
     <system:String x:Key="palettes_imageNote">Image needs to be a 16 (or 32 for gradients) pixels wide png, and any height. Transparency is supported.</system:String>
     <system:String x:Key="palettes_randomise">Randomise color order</system:String>
 
@@ -36,6 +35,7 @@
     <system:String x:Key="onNoteHit">On note hit:</system:String>
     <system:String x:Key="changeSize">Change Size</system:String>
     <system:String x:Key="changeTint">Change Tint</system:String>
+    <system:String x:Key="showKeyboard">Show Keyboard</system:String>
 
     <!--Camera-->
     <system:String x:Key="speedWarning">WARNING: This plug-in can use much more ram and CPU due to the higher note time on screen. The more notes are visible, the slower the render!</system:String>
@@ -54,13 +54,13 @@
     <system:String x:Key="horizontal">Horizontal</system:String>
     <system:String x:Key="vertical">Vertical</system:String>
 
-    <system:String x:Key="viewTilt">Camera Tilt</system:String> <!--NEW-->
-    <system:String x:Key="viewTurn">Camera Turn</system:String> <!--NEW-->
-    <system:String x:Key="offsetX">X</system:String> <!--NEW-->
-    <system:String x:Key="offsetY">Y</system:String> <!--NEW-->
-    <system:String x:Key="offsetZ">Z</system:String> <!--NEW-->
-    <system:String x:Key="topPreset">Top</system:String> <!--NEW-->
-    <system:String x:Key="perspectivePreset">Perspective</system:String> <!--NEW-->
+    <system:String x:Key="viewTilt">Camera Tilt</system:String>
+    <system:String x:Key="viewTurn">Camera Turn</system:String>
+    <system:String x:Key="offsetX">X</system:String>
+    <system:String x:Key="offsetY">Y</system:String>
+    <system:String x:Key="offsetZ">Z</system:String>
+    <system:String x:Key="topPreset">Top</system:String>
+    <system:String x:Key="perspectivePreset">Perspective</system:String> 
 
     <!--Aura-->
     <system:String x:Key="imageHint">Image needs to be square png and only alpha is taken into account</system:String>

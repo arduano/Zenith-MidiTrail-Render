@@ -33,10 +33,11 @@
                     <CheckBox x:Name="boxNotes" Content="{DynamicResource 3dNotes}" HorizontalAlignment="Left" Margin="10,93,0,0" VerticalAlignment="Top" Checked="BoxNotes_Checked" Unchecked="BoxNotes_Checked"/>
                     <CheckBox x:Name="useVel" Content="{DynamicResource velocityStrength}" HorizontalAlignment="Left" Margin="10,164,0,0" VerticalAlignment="Top" Checked="UseVel_Checked" Unchecked="UseVel_Checked" />
                     <CheckBox x:Name="eatNotes" Content="{DynamicResource keyboardClip}" HorizontalAlignment="Left" Margin="10,184,0,0" VerticalAlignment="Top" Checked="CheckboxChecked" Unchecked="CheckboxChecked"/>
-                    <Label Content="{DynamicResource onNoteHit}" HorizontalAlignment="Left" Margin="10,224,0,0" VerticalAlignment="Top"/>
-                    <CheckBox x:Name="notesChangeSize" Content="{DynamicResource changeSize}" HorizontalAlignment="Left" Margin="10,250,0,0" VerticalAlignment="Top" Unchecked="CheckboxChecked" Checked="CheckboxChecked"/>
-                    <CheckBox x:Name="notesChangeTint" Content="{DynamicResource changeTint}" HorizontalAlignment="Left" Margin="10,270,0,0" VerticalAlignment="Top" Checked="CheckboxChecked" Unchecked="CheckboxChecked"/>
+                    <Label Content="{DynamicResource onNoteHit}" HorizontalAlignment="Left" Margin="10,242,0,0" VerticalAlignment="Top"/>
+                    <CheckBox x:Name="notesChangeSize" Content="{DynamicResource changeSize}" HorizontalAlignment="Left" Margin="10,268,0,0" VerticalAlignment="Top" Unchecked="CheckboxChecked" Checked="CheckboxChecked"/>
+                    <CheckBox x:Name="notesChangeTint" Content="{DynamicResource changeTint}" HorizontalAlignment="Left" Margin="10,288,0,0" VerticalAlignment="Top" Checked="CheckboxChecked" Unchecked="CheckboxChecked"/>
                     <CheckBox x:Name="sameWidthNotes" Content="{DynamicResource sameWidthNotes}" HorizontalAlignment="Left" Margin="10,204,0,0" VerticalAlignment="Top" Checked="CheckboxChecked" Unchecked="CheckboxChecked"/>
+                    <CheckBox x:Name="showKeyboard" Content="{DynamicResource showKeyboard}" HorizontalAlignment="Left" Margin="10,224,0,0" VerticalAlignment="Top" Checked="CheckboxChecked" Unchecked="CheckboxChecked" IsChecked="True"/>
                     <CheckBox IsEnabled="{Binding IsChecked, ElementName=boxNotes }" x:Name="lightShade" Content="{DynamicResource lightShade}" HorizontalAlignment="Left" Margin="10,113,0,0" VerticalAlignment="Top" Checked="CheckboxChecked" Unchecked="CheckboxChecked"/>
                     <CheckBox x:Name="tiltKeys" Content="{DynamicResource tiltKeys}" HorizontalAlignment="Left" Margin="10,73,0,0" VerticalAlignment="Top"  Checked="CheckboxChecked" Unchecked="CheckboxChecked"/>
                     <bme:NoteColorPalettePick x:FieldModifier="public" x:Name="paletteList" Margin="0,10,10,10" HorizontalAlignment="Right" Width="184"/>
