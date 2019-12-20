@@ -63,6 +63,8 @@ namespace MIDITrailRender
         public SettingsCtrl(Settings settings) : base()
         {
             InitializeComponent();
+            noteDeltaScreenTime.nudToSlider = v => Math.Log(v, 2);
+            noteDeltaScreenTime.sliderToNud = v => Math.Pow(2, v);
             this.settings = settings;
             paletteList.SetPath("Plugins\\Assets\\Palettes");
             LoadSettings(true);
@@ -123,7 +125,6 @@ namespace MIDITrailRender
             try
             {
                 settings.FOV = (double)FOVSlider.Value / 180 * Math.PI;
-                FOVVal.Content = Math.Round(FOVSlider.Value).ToString();
             }
             catch { }
         }
@@ -133,7 +134,6 @@ namespace MIDITrailRender
             try
             {
                 settings.camAng = (double)viewAngSlider.Value / 180 * Math.PI;
-                viewAngVal.Content = Math.Round(viewAngSlider.Value).ToString();
             }
             catch { }
         }
@@ -143,7 +143,6 @@ namespace MIDITrailRender
             try
             {
                 settings.camRot = (double)viewTurnSlider.Value / 180 * Math.PI;
-                viewTurnVal.Content = Math.Round(viewTurnSlider.Value).ToString();
             }
             catch { }
         }
@@ -153,7 +152,6 @@ namespace MIDITrailRender
             try
             {
                 settings.deltaTimeOnScreen = Math.Pow(2, noteDeltaScreenTime.Value);
-                screenTime.Content = (Math.Round(settings.deltaTimeOnScreen * 100) / 100).ToString();
             }
             catch (NullReferenceException)
             {
@@ -166,7 +164,6 @@ namespace MIDITrailRender
             try
             {
                 settings.viewdist = (double)renderDistSlider.Value;
-                renderDistVal.Content = Math.Round(renderDistSlider.Value).ToString();
             }
             catch { }
         }
@@ -176,7 +173,6 @@ namespace MIDITrailRender
             try
             {
                 settings.viewback = (double)renderDistBackSlider.Value;
-                renderDistBackVal.Content = Math.Round(renderDistBackSlider.Value).ToString();
             }
             catch { }
         }

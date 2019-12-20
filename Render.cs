@@ -38,6 +38,7 @@ namespace MIDITrailRender
 
         public string Name => "MIDITrail+";
         public string Description => "Clone of the popular tool MIDITrail for black midi rendering. Added exclusive bonus features, and less buggy. Extremely customisable.";
+        public string LanguageDictName { get; } = "miditrail";
 
         public bool Initialized { get; set; } = false;
 
